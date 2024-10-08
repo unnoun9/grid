@@ -1,4 +1,5 @@
 .vscode
+obj
 *.exe
 *.o
 imgui.ini

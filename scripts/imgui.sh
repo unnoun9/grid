@@ -6,7 +6,7 @@ cd ..
 mkdir -p dependencies/imgui/lib
 
 # variables
-FLAGS="-std=c++17 -O2 -c"
+FLAGS="-std=c++17 -O3 -c"
 INCLUDE_PATH="-Idependencies/imgui -Idependencies/sfml/include"
 
 for file in dependencies/imgui/*.cpp; do

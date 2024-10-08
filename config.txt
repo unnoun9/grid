@@ -1,7 +1,0 @@
-Window 1280 720
-Font fonts/CaviarDreams.ttf 32 255 255 255
-Rectangle red 200 200 17 32 201 67 45 50 25
-Rectangle grey 300 250 -2 2 100 100 100 50 100
-Circle blue 200 200 2 4 0 0 255 100
-Circle purple 300 300 -2 -1 255 0 255 75
-Circle green 100 100 -3 2 0 255 0 50
