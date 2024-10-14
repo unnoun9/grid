@@ -22,6 +22,7 @@
     - `vars` contains some useful variables that either *Actions* or *ImGui*'s interface change in order for us to do some logic with them.
     - `register_action()` just stores a keyboard sequence (key or a shortcut) in the `action_map` to the corresponding action's name.
     - `do_action()` does basic logic related to actions if an action that exists in the action map is called upon by the user through pressing a key or a shortcut.
+    - `quit()` and `drawline()` are pretty self-explanatory.
 - **Note:** ImGui's functions are mostly in `ImGui::` namespace and SFML's functions are mostly in the `sf::` namespace.
 - `vec2t.h` declares a Mathematical 2D Vector. This is a template class. *float*, *int*, and *unsigned int* versions of it are *typedef*-ed at the end of the file These will be used to represent *(x, y)* positions and *(w, h)* size of/in an image.
 - `Action.h` and `Action.cpp` define an action that just holds some basic data in order for us to do proper event handling. `do_action()` uses this extensively.
