@@ -1,5 +1,7 @@
 #include "util.h"
-#include "globals.h"
+
+extern sf::RenderWindow window;
+extern bool running;
 
 // just draws a line from p1 to p2 of given color
 void util::drawline(vec2 p1, vec2 p2, sf::Color color)

@@ -1,6 +1,6 @@
 #pragma once
 #include <SFML/Graphics/RenderWindow.hpp>
-#include "vec2.h"
+#include "vec2t.h"
 
 const int GRID_SIZE = 32;
 

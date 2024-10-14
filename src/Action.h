@@ -1,13 +1,12 @@
 #pragma once
 #include <iostream>
-#include "vec2.h"
-
+#include "vec2t.h"
 
 struct Action
 {
     enum action_type
     {
-        NONE = 0, START = 1, END = 2
+        NONE = -1, START, END
     };
 
     std::string name = "none";

@@ -1,14 +1,9 @@
 #pragma once
+#include "vars.h"
+#include "image.h"
 
 namespace gui {
-
-    struct Variables
-    {
-        bool show_open_file_dialog = false;
-        bool show_save_file_dialog = false;
-    };
-
-    void show_menu_bar(Variables*);
-    void show_file_menu(Variables*);
-    void show_file_dialog(Variables*);
+    void show_menu_bar(Variables&);
+    void show_open_dialog(Variables&, Image&);
+    void show_saveas_dialog(Variables&);
 }

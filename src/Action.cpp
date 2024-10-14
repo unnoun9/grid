@@ -19,7 +19,6 @@ Action::Action(const std::string& name, action_type type, const vec2& pos)
 {
 }
 
-
 std::ostream& operator<<(std::ostream& os, const Action& action)
 {
     os << "(" << action.name << ", " << action.type << ", " << action.pos<< ")";
