@@ -3,6 +3,7 @@
 ## Repository Structure
 - `src` directory contains all the source code that we will be editing.
     * It has all the .cpp and .h files.
+    * `structures` directory here contains files for implementation of our own data structures that will be needed. For now, we are using STL's data structure. Will change once these are properly implemented.
 - `bin` directory contains the executable output program and SFML dlls (which are important for dynamic linking).
     * The final executable i.e `grid.exe` will be here along with .dll files that are necessary to run the program.
 - `dependencies` directory has all the libraries' header files and lib files.
@@ -24,7 +25,6 @@
 - **Note:** ImGui's functions are mostly in `ImGui::` namespace and SFML's functions are mostly in the `sf::` namespace.
 - `vec2t.h` declares a Mathematical 2D Vector. This is a template class. *float*, *int*, and *unsigned int* versions of it are *typedef*-ed at the end of the file These will be used to represent *(x, y)* positions and *(w, h)* size of/in an image.
 - `Action.h` and `Action.cpp` define an action that just holds some basic data in order for us to do proper event handling. `do_action()` uses this extensively.
-- `util.h`and `util.cpp` uses a namespace to declare and define some useful general helper functions.
 - `gui.h` and `gui.cpp` define very simple functions that take an instance of the variable struct (defined in *main.cpp*) to modify it. These functions are simple and just call the very nice and convenient ImGui functions to display the GUI
 - `image.h` and `image.cpp` contain some image-related stuff. Look at it in detail to understand. Do note that this is quite incomplete right now.
 
