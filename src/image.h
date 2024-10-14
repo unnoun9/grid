@@ -2,10 +2,12 @@
 #include <SFML/Graphics.hpp>
 #include <cstdint>
 #include <vector>
+
 #include "vec2t.h"
 
-// ############################### INCOMPLETE ###############################
+// [[[1]]], [[[2]]]
 
+// ############################### PIXEL ###############################
 // represents a single r, g, b, a color pixel
 struct Pixel
 {
@@ -17,6 +19,7 @@ struct Pixel
     Pixel(const Pixel& other);
 };
 
+// ############################### IMAGE ###############################
 // represents a raster image
 struct Image
 {
@@ -39,6 +42,7 @@ struct Image
     void operator() (uint32_t x, uint32_t y, const Pixel& pixel); // usage: img(x, y) = pixel or img(x, y, pixel)
 };
 
+// ############################### LAYER ###############################
 // a layer that contains various information
 // template argument should be an image (pixel array) or some kind of data like (brush stroke)
 template <typename T>
@@ -57,6 +61,7 @@ struct Layer
 
 };
 
+// ############################### CANVAS ###############################
 struct Image_Canvas
 {
     

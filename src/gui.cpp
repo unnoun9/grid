@@ -1,10 +1,11 @@
 #include <imgui.h>
 #include <ImGuiFileDialog.h>
-#include "util.h"
+
 #include "vars.h"
 #include "gui.h"
 
 extern vec2 window_size;
+extern void quit();
 
 void gui::show_menu_bar(Variables& vars)
 {
@@ -26,7 +27,7 @@ void gui::show_menu_bar(Variables& vars)
                 vars.show_saveas_img_dialog = true;
             }
             ImGui::Separator();
-            if (ImGui::MenuItem("Quit", "Alt+F4")) { util::quit(); }
+            if (ImGui::MenuItem("Quit", "Alt+F4")) { quit(); }
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Edit"))
@@ -74,13 +75,11 @@ void gui::show_open_dialog(Variables& vars, Image& img)
         if (ImGuiFileDialog::Instance()->IsOk())
         {
             std::string open_path = ImGuiFileDialog::Instance()->GetFilePathName();
-            std::cout << "Open path: " << open_path << "\n";
             // load the image
             if (!img.loadfromfile(open_path, true))
             {
                 std::cerr << "Failed to open image: " << open_path << std::endl;
             }
-
         }
         ImGuiFileDialog::Instance()->Close();
         vars.show_open_img_dialog = false;
@@ -106,8 +105,8 @@ void gui::show_saveas_dialog(Variables& vars)
         if (ImGuiFileDialog::Instance()->IsOk())
         {
             std::string save_path = ImGuiFileDialog::Instance()->GetFilePathName();
-            std::cout << "Save path: " << save_path << "\n";
             // save the image
+            // ...
         }
         ImGuiFileDialog::Instance()->Close();
         vars.show_saveas_img_dialog = false;

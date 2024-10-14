@@ -4,20 +4,24 @@
 #include <imgui.h>
 #include <imgui-SFML.h>
 #include <ImGuiFileDialog.h>
+
 #include "image.h"
-#include "util.h"
 #include "Action.h"
 #include "gui.h"
 #include "vars.h"
 
 // ############################### TODOS ###############################
-// [[[0]]] make data structures and helper classes
-//          - hashmap
+// [[[0]]] make template data structures and helper classes
+//          - static array
+//          - dynamic array
+//          - linked list
 //          - stack
 //          - queue
-//          - string class
-//          - image class
-// [[[2]]] image canvas, storing the image in a suitable data structure (probably a dynamic array), image layers
+//          - hash map
+//          - string class (maybe)
+// [[[1]]] complete image canvas, storing the image in a suitable data structure (probably a dynamic array), image layers
+// [[[2]]] test basic shaders and try saving the image
+// [[[3]]] start implementing actual features - filters, tools, zoom, pan, layers, etc
 
 // ############################### MACROS ###############################
 // macro to enable or disable custom debugging
@@ -37,10 +41,14 @@ std::list<int> currently_pressed_keys;  // to track the current shortcut / press
 Variables vars; // variables that imgui and actions use and change
 
 // ############################### FUNC DECLARATIONS ###############################
-// does actions based on the data passed
-void do_action(const Action& action);
 // puts an action in the action map
 void register_action(const std::list<int>& keys, const std::string& action_name);
+// does actions based on the data passed
+void do_action(const Action& action);
+// just stops the loop and closes the window
+void quit();
+// draws a line from point p1 to point p2 of the specified color in the window
+void drawline(vec2 p1, vec2 p2, sf::Color color = sf::Color::White);
 
 int main()
 {
@@ -75,11 +83,11 @@ int main()
             ImGui::SFML::ProcessEvent(window, event);
 
             if (event.type == sf::Event::Closed)
-                util::quit();
+                quit();
 
             if (event.type == sf::Event::KeyPressed)
                 if (event.key.code == sf::Keyboard::Escape)
-                    util::quit();
+                    quit();
                 
             if (event.type == sf::Event::LostFocus)
                 currently_pressed_keys.clear();
@@ -170,6 +178,11 @@ int main()
 }
 
 // ############################### FUNC DEFINITIONS ###############################
+void register_action(const std::list<int>& keys, const std::string& action_name)
+{
+    action_map[keys] = action_name;
+}
+
 void do_action(const Action& action)
 {
     if (action.name == "mouse_move")
@@ -220,7 +233,17 @@ void do_action(const Action& action)
     }
 }
 
-void register_action(const std::list<int>& keys, const std::string& action_name)
+void drawline(vec2 p1, vec2 p2, sf::Color color)
 {
-    action_map[keys] = action_name;
+    sf::Vertex line[] = {
+        sf::Vertex(vec2(p1.x, p1.y), color),
+        sf::Vertex(vec2(p2.x, p2.y), color)
+    };
+    window.draw(line, 2, sf::Lines);   
+}
+
+void quit()
+{
+    running = false;
+    window.close();
 }
