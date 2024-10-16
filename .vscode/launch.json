@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type":"cppdbg",
+            "request": "launch",
+            "name": "Launch",
+            "program":"${workspaceFolder}/bin/grid.exe",
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+    ]
+}

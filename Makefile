@@ -25,7 +25,7 @@ $(OUTPUT): obj $(OBJ_FILES) $(IMGUI_FILES)
 
 # rule to compile source into object files
 obj/%.o: src/%.cpp
-	$(COMPILER) -c $< -o $@ $(FLAGS) $(INCLUDE_PATHS)
+	$(COMPILER) -c -g $< -o $@ $(FLAGS) $(INCLUDE_PATHS)
 
 # rule to make a directory to store the temporary object files
 obj:

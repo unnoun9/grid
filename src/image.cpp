@@ -1,18 +1,23 @@
 #include "image.h"
+#include <cassert>
+
+extern vec2 window_size;
+
 
 // [[[1]]], [[[2]]]
 
-// ############################### PIXEL ###############################
+
+// ................................................. PIXEL .................................................
 Pixel::Pixel()
 {
 }
 
-Pixel::Pixel(uint8_t r, uint8_t g, uint8_t b, uint8_t a)
+Pixel::Pixel(ui8 r, ui8 g, ui8 b, ui8 a)
     : r(r), g(g), b(b), a(a)
 {
 }
 
-Pixel::Pixel(uint8_t r, uint8_t g, uint8_t b)
+Pixel::Pixel(ui8 r, ui8 g, ui8 b)
    : r(r), g(g), b(b), a(255)
 {
 }
@@ -22,8 +27,8 @@ Pixel::Pixel(const Pixel& other)
 {
 }
 
-// ############################### IMAGE ###############################
-// loads the image using sf::Image into our data structure then throws sf::Image away
+
+// ................................................. IMAGE .................................................
 bool Image::loadfromfile(const std::string& path, bool uploadtotexture)
 {
     sf::Image sfimage;
@@ -33,20 +38,20 @@ bool Image::loadfromfile(const std::string& path, bool uploadtotexture)
         return false;
     }
 
-    size = sfimage.getSize();
-    pixels.resize(size.x * size.y * 4);
-    memcpy(pixels.data(), sfimage.getPixelsPtr(), pixels.size());
+    m_size = sfimage.getSize();
+    m_pixels.resize(m_size.x * m_size.y * 4);
+    memcpy(m_pixels.data(), sfimage.getPixelsPtr(), m_pixels.size());
 
-    if (uploadtotexture) upload_to_texture(texture);
+    if (uploadtotexture) upload_to_texture(nullptr);
 
     return true;
 }
 
-// using sf::Image, save the pixel data to an image file
+
 bool Image::savetofile(const std::string& path)
 {
     sf::Image sfimage;
-    sfimage.create(size.x, size.y, pixels.data());
+    sfimage.create(m_size.x, m_size.y, m_pixels.data());
     if (!sfimage.saveToFile(path))
     {
         std::cerr << "Failed to save image at: " << path << std::endl;
@@ -55,58 +60,52 @@ bool Image::savetofile(const std::string& path)
     return true;
 }
 
-// put the pixel data in the texture to render
-void Image::upload_to_texture(sf::Texture& texture)
+
+void Image::upload_to_texture(sf::Texture* texture)
 {
-    if (!texture.create(size.x, size.y))
+    texture = (texture == nullptr ? &m_texture : texture);
+    if (!texture->create(m_size.x, m_size.y))
     {
-        std::cerr << "Failed to create texture of size: " << size << std::endl;
+        std::cerr << "Failed to create texture of size: " << m_size << std::endl;
         return;
     }
-    texture.update(pixels.data());
-    sprite.setTexture(texture, true);
+    texture->update(m_pixels.data());
+    m_sprite.setTexture(*texture, true);
+    m_sprite.setOrigin(m_size.x / 2, m_size.y / 2);
+    m_sprite.setPosition(window_size.x / 2, window_size.y / 2);
 }
 
-// operators below
-uint8_t Image::operator[](size_t index) const
-{
-    return pixels[index];
-}
 
-uint8_t& Image::operator[](size_t index)
+Pixel Image::get_pixel(int x, int y)
 {
-    return pixels[index];
-}
-
-Pixel Image::operator() (uint32_t x, uint32_t y) const
-{
-    if (x < 0 || y < 0 || x > size.x || y > size.y)
+    if (x < 0 || x > m_size.x || y < 0 || y > m_size.y)
     {
-        std::cerr << "Accessing pixels of image OOB at: (" << x << ", " << y << ")\n";
+        std::cerr << "Image::get_pixel() at " << vec2i(x, y) << " OOB\n";
         return Pixel();
     }
-    size_t index = (y * size.x + x) * 4;
-    return Pixel(pixels[index], pixels[index + 1], pixels[index + 2], pixels[index + 3]);
+    // assert(x > 0 && x < size.x && "Image::get_pixel() x-coordinate OOB");
+    // assert(y > 0 && y < size.x && "Image::get_pixel() y-coordinate OOB");
+
+    const int index = (y * m_size.x + x) * 4;
+    ui8* pixel = &m_pixels[index];
+    return { pixel[0], pixel[1], pixel[2], pixel[3] };
 }
 
-void Image::operator() (uint32_t x, uint32_t y, const Pixel& pixel)
+
+void Image::set_pixel(int x, int y, const Pixel& pix)
 {
-    if (x < 0 || y < 0 || x > size.x || y > size.y)
+    if (x < 0 || x > m_size.x || y < 0 || y > m_size.y)
     {
-        std::cerr << "Accessing pixels of image OOB at: (" << x << ", " << y << ")\n";
+        std::cerr << "Image::set_pixel() at " << vec2i(x, y) << " OOB\n";
         return;
     }
-    size_t index = (y * size.x + x) * 4;
-    pixels[index]     = pixel.r;
-    pixels[index + 1] = pixel.g;
-    pixels[index + 2] = pixel.b;
-    pixels[index + 3] = pixel.a;
-}
+    // assert(x > 0 && x < size.x && "Image::set_pixel() x-coordinate OOB");
+    // assert(y > 0 && y < size.x && "Image::set_pixel() y-coordinate OOB");
 
-
-// ############################### LAYER ###############################
-template <typename T>
-Layer<T>::Layer(const std::string& name, const vec2& pos, const vec2& size, float opacity, short index)
-      : name(name), pos(pos), opacity(opacity), index(index)
-{
+    const int index = (y * m_size.x + x) * 4;
+    ui8* pixel = &m_pixels[index];
+    pixel[0] = pix.r;
+    pixel[1] = pix.g;
+    pixel[2] = pix.b;
+    pixel[3] = pix.a;
 }

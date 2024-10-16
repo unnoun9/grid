@@ -2,317 +2,227 @@
 #include <iostream>
 #include <cmath>
 #include <SFML/System/Vector2.hpp>
-#include <cstdint>
+
+#include "int.h"
 
 #define PI 3.14159265359
 #define DEGREE 0.01745329251
 #define RADIAN 57.2957795131
 
+// the actual template 2d mathematical vector that stores (x, y) pair
 template <typename T>
 struct vec2t
 {
-    T x = 0;
-    T y = 0;
+    T x{};
+    T y{};
 
-    // Constructors
-    vec2t();
-    vec2t(T xin, T yin);
-    vec2t(float angle);
-    vec2t(const vec2t& other);
+    // default constructor
+    vec2t() = default;
 
-    // Constructors to support SFML types
-    vec2t(const sf::Vector2f& sfvec);
-    vec2t(const sf::Vector2i& sfvec);
-    vec2t(const sf::Vector2u& sfvec);
+    // construct from cartesian coordinates (x, y)
+    vec2t(T x, T y)
+        : x(x), y(y) {}
 
-    // Conversion Operators to SFML types
-    operator sf::Vector2f() const;
-    operator sf::Vector2i() const;
-    operator sf::Vector2u() const;
+    // construct from an angle in degrees w.r.t x-axis
+    vec2t(float angle)
+        : x(std::cos(angle * DEGREE)), y(std::sin(angle * DEGREE)) {}
 
-    // Operator Overloads
-    bool operator == (const vec2t& rhs) const;
-    bool operator != (const vec2t& rhs) const;
-
-    vec2t operator + (const vec2t& rhs) const;
-    vec2t operator - (const vec2t& rhs) const;
-    vec2t operator / (const float val) const;
-    vec2t operator * (const float val) const;
-    vec2t operator - () const;
-
-    void operator += (const vec2t& rhs);
-    void operator -= (const vec2t& rhs);
-    void operator *= (const float val);
-    void operator /= (const float val);
-
-    // Utility Functions
-    float dot(const vec2t& rhs) const;
-    float cross2d(const vec2t& rhs) const;
-    float magnitudesq() const;
-    float magnitude() const;
-    vec2t normalize() const;
-    float dist(const vec2t& rhs) const;
-    float angle() const;
-    float angle(const vec2t& rhs) const;
-    vec2t perpendicular() const;  // Returns a vector perpendicular to this one
-    vec2t lerp(const vec2t& rhs, float t) const;  // Linear interpolation
-    vec2t rotate(float angle) const;  // Rotate vector by angle in degrees
-
-    // Stream output for debugging
+    // construct from another type of vec2t
     template <typename U>
-    friend std::ostream& operator<<(std::ostream& os, const vec2t<U>& vec);
+    vec2t(const vec2t<U>& vec)
+        : x((T)vec.x), y((T)vec.y) {}
+
+    // copy constructor
+    vec2t(const vec2t& other) = default;
+
+    // construct from SFML's Vector2
+    template <typename U>
+    vec2t(const sf::Vector2<U>& sfvec)
+        : x((T)sfvec.x), y((T)sfvec.y) {}
+
+    // coversion to sf::Vector2<T>
+    operator sf::Vector2<T> () const
+    {
+        return sf::Vector2<T>(x, y);
+    }
+
+    // the dot product with rhs
+    T dot(const vec2t& rhs) const
+    {
+        return x * rhs.x + y * rhs.y;
+    }
+
+    // by imagining vec2t's as vec3t's, compute the z-coordinate of the cross product with rhs
+    T cross(const vec2t& rhs) const
+    {
+        return x * rhs.y - y * rhs.x;
+    }
+
+    // the length or magnitude squared 
+    T magnitudesq() const
+    {
+        return dot(*this);
+    }
+
+    // the actual length or magnitude
+    T magnitude() const
+    {
+        return std::sqrt(dot(*this));
+    }
+
+    // normalize to make a unit vector
+    vec2t normalize() const
+    {
+        T mag = magnitude();
+        return mag == 0 ? vec2t{} : *this / mag;
+    }
+
+    // the distance from rhs
+    float dist(const vec2t& rhs) const
+    {
+        return (*this - rhs).magnitude();
+    }
+
+    // the angle in degrees made by this vector w.r.t the x-axis
+    float angle() const
+    {
+        return std::atan2(y, x) * RADIAN;
+    }
+
+    // the angle in degrees between this and rhs
+    float angle(const vec2t& rhs) const
+    {
+        T dotprod = dot(rhs);
+        T mag = magnitude() * rhs.magnitude();
+        return std::acos(dotprod / mag) * RADIAN;
+    }
+
+    // one of the ways to receive a perpendicular vector from this one
+    vec2t perpendicular() const
+    {
+        return vec2t(-y, x);
+    }
+
+    // linearly interpolate from this to rhs
+    vec2t lerp(const vec2t& rhs, float t) const
+    {
+        return *this + t * (rhs - *this);
+    }
+
+    // rotate the vector by the specified angle in degrees
+    vec2t rotate(float angle) const
+    {
+        float rad = angle * DEGREE;
+        return vec2t(x * std::cos(rad) - y * std::sin(rad), x * std::sin(rad) + y * std::cos(rad));
+    }
 };
 
-
-// Constructors
+// ..................................................................................................
+// equality
 template <typename T>
-vec2t<T>::vec2t()
+bool operator== (const vec2t<T>& lhs, const vec2t<T>& rhs)
 {
+    return lhs.x == rhs.x && lhs.y == rhs.y;
 }
 
-
+// ..................................................................................................
+// inequality
 template <typename T>
-vec2t<T>::vec2t(T xin, T yin)
-    : x(xin), y(yin)
+bool operator!= (const vec2t<T>& lhs, const vec2t<T>& rhs)
 {
+    return !(lhs == rhs);
 }
 
-
+// ..................................................................................................
+// addition
 template <typename T>
-vec2t<T>::vec2t(float angle)
+vec2t<T> operator+ (const vec2t<T>& lhs, const vec2t<T>& rhs)
 {
-    float rad = angle * DEGREE;
-    x = (T)cosf(rad);
-    y = (T)sinf(rad);
+    return vec2t<T>(lhs.x + rhs.x, lhs.y + rhs.y);
 }
 
-
+// ..................................................................................................
+// subtraction
 template <typename T>
-vec2t<T>::vec2t(const vec2t& other)
-    : x(other.x), y(other.y)
+vec2t<T> operator- (const vec2t<T>& lhs, const vec2t<T>& rhs)
 {
+    return vec2t<T>(lhs.x - rhs.x, lhs.y - rhs.y);
 }
 
-
-// Constructors for SFML types
+// ..................................................................................................
+// scalar multiplication
 template <typename T>
-vec2t<T>::vec2t(const sf::Vector2f& sfvec)
-    : x(sfvec.x), y(sfvec.y)
+vec2t<T> operator* (const vec2t<T>& vec, float scalar)
 {
+    return vec2t<T>(vec.x * scalar, vec.y * scalar);
 }
 
-
+// ..................................................................................................
+// scalar division
 template <typename T>
-vec2t<T>::vec2t(const sf::Vector2i& sfvec)
-    : x((float)(sfvec.x)), y((float)(sfvec.y))
+vec2t<T> operator/ (const vec2t<T>& vec, float scalar)
 {
+    return vec2t<T>(vec.x / scalar, vec.y / scalar);
 }
 
-
+// ..................................................................................................
+// unary negation
 template <typename T>
-vec2t<T>::vec2t(const sf::Vector2u& sfvec)
-    : x((float)(sfvec.x)), y((float)(sfvec.y))
+vec2t<T> operator- (const vec2t<T>& vec)
 {
+    return vec2t<T>(-vec.x, -vec.y);
 }
 
-
-// Conversion Operators to SFML types
+// ..................................................................................................
+// addition compound assignment
 template <typename T>
-vec2t<T>::operator sf::Vector2f() const
+vec2t<T>& operator+= (vec2t<T>& lhs, const vec2t<T>& rhs)
 {
-    return sf::Vector2f(x, y);
+    lhs.x += rhs.x;
+    lhs.y += rhs.y;
+    return lhs;
 }
 
-
+// ..................................................................................................
+// subtraction compound assignment
 template <typename T>
-vec2t<T>::operator sf::Vector2i() const
+vec2t<T>& operator-= (vec2t<T>& lhs, const vec2t<T>& rhs)
 {
-    return sf::Vector2i((int)(x), (int)(y));
+    lhs.x -= rhs.x;
+    lhs.y -= rhs.y;
+    return lhs;
 }
 
-
+// ..................................................................................................
+// scalar multiplication compound assignment
 template <typename T>
-vec2t<T>::operator sf::Vector2u() const
+vec2t<T>& operator*= (vec2t<T>& vec, float scalar)
 {
-    return sf::Vector2u((unsigned int)(x), (unsigned int)(y));
+    vec.x *= scalar;
+    vec.y *= scalar;
+    return vec;
 }
 
-
-// Operator Overloads
+// ..................................................................................................
+// scalar division compound assignment
 template <typename T>
-bool vec2t<T>::operator == (const vec2t& rhs) const
+vec2t<T>& operator/= (vec2t<T>& vec, float scalar)
 {
-    return x == rhs.x && y == rhs.y;
+    vec.x /= scalar;
+    vec.y /= scalar;
+    return vec;
 }
-
-
+// ..................................................................................................
+// to print a vec2t
 template <typename T>
-bool vec2t<T>::operator != (const vec2t& rhs) const
-{
-    return !(*this == rhs);
-}
-
-
-template <typename T>
-vec2t<T> vec2t<T>::operator + (const vec2t& rhs) const
-{
-    return vec2t(x + rhs.x, y + rhs.y);
-}
-
-
-template <typename T>
-vec2t<T> vec2t<T>::operator - (const vec2t& rhs) const
-{
-    return vec2t(x - rhs.x, y - rhs.y);
-}
-
-
-template <typename T>
-vec2t<T> vec2t<T>::operator / (const float val) const
-{
-    return vec2t(x / val, y / val);
-}
-
-
-template <typename T>
-vec2t<T> vec2t<T>::operator * (const float val) const
-{
-    return vec2t(x * val, y * val);
-}
-
-
-template <typename T>
-vec2t<T> vec2t<T>::operator - () const
-{
-    return vec2t(-x, -y);
-}
-
-
-template <typename T>
-void vec2t<T>::operator += (const vec2t& rhs)
-{
-    x += rhs.x;
-    y += rhs.y;
-}
-
-
-template <typename T>
-void vec2t<T>::operator -= (const vec2t& rhs)
-{
-    x -= rhs.x;
-    y -= rhs.y;
-}
-
-
-template <typename T>
-void vec2t<T>::operator *= (const float val)
-{
-    x *= val;
-    y *= val;
-}
-
-
-template <typename T>
-void vec2t<T>::operator /= (const float val)
-{
-    x /= val;
-    y /= val;
-}
-
-
-// Utility Functions
-template <typename T>
-float vec2t<T>::dot(const vec2t& rhs) const
-{
-    return x * rhs.x + y * rhs.y;
-}
-
-
-template <typename T>
-float vec2t<T>::cross2d(const vec2t& rhs) const
-{
-    return x * rhs.y - rhs.x * y;
-}
-
-
-template <typename T>
-float vec2t<T>::magnitudesq() const
-{
-    return x * x + y * y;
-}
-
-
-template <typename T>
-float vec2t<T>::magnitude() const
-{
-    return sqrtf(magnitudesq());
-}
-
-
-template <typename T>
-vec2t<T> vec2t<T>::normalize() const
-{
-    float mag = magnitude();
-    if (mag < 1e-6)  // Small magnitude check
-        return vec2t(0, 0); // Or return a unit vector in any direction, depending on your needs
-    return *this / mag;
-}
-
-
-template <typename T>
-float vec2t<T>::dist(const vec2t& rhs) const
-{
-    return (*this - rhs).magnitude();
-}
-
-
-template <typename T>
-float vec2t<T>::angle() const
-{
-    return atan2f(y, x) * RADIAN;
-}
-
-
-template <typename T>
-float vec2t<T>::angle(const vec2t& rhs) const
-{
-    float dotprod = dot(rhs);
-    float mags = magnitude() * rhs.magnitude();
-    return acosf(dotprod / mags) * RADIAN;
-}
-
-
-template <typename T>
-vec2t<T> vec2t<T>::perpendicular() const
-{
-    return vec2t(-y, x);
-}
-
-
-template <typename T>
-vec2t<T> vec2t<T>::lerp(const vec2t& rhs, float t) const
-{
-    return *this + (rhs - *this) * t;
-}
-
-
-template <typename T>
-vec2t<T> vec2t<T>::rotate(float angle) const
-{
-    float rad = angle * DEGREE;
-    float cosine = cosf(rad);
-    float sine = sinf(rad);
-    return vec2t(x * cosine - y * sine, x * sine + y * cosine);
-}
-
-// Stream output for debugging
-template <typename U>
-std::ostream& operator<<(std::ostream& os, const vec2t<U>& vec)
+std::ostream& operator<< (std::ostream& os, const vec2t<T> vec)
 {
     os << "(" << vec.x << ", " << vec.y << ")";
     return os;
 }
 
-typedef vec2t<float> vec2;
-typedef vec2t<int32_t> vec2i;
-typedef vec2t<uint32_t> vec2ui;
+// ..................................................................................................
+// most common vec2t types
+typedef vec2t<float> vec2;  // this should be used for more accurate mathematical operations
+typedef vec2t<i32> vec2i;
+typedef vec2t<ui32> vec2ui;

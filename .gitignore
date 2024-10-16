@@ -1,7 +1,7 @@
-.vscode
+settings.json
 obj
 *.exe
 *.o
 imgui.ini
-test.jpg
-test.png
+test.*
+untitled.*
