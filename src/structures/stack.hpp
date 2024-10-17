@@ -1,10 +1,12 @@
 #pragma once
-#include <stdexcept>
+#include<iostream>
+
 #include "int.h"
 
 // [[[0]]] - implement an efficient dynamic array based stack -- template argument must by the type of the data
 
 #define SIZE 10 //default size
+#define SIZE_Pi 50000000    //default size of pixel array
 
 namespace ds
 {
@@ -17,13 +19,16 @@ struct Stack
     ~Stack();
 
     // push element on the top of stack, resize if stack is full
-    void push(T elem);
+    void push(T* elem);
 
     // pop the element from the top if stack is not empty
-    T pop();
+    T* pop();
 
     // get the top element of the stack
-    T get_top() const;
+    T* get_top() const;
+
+    // display the top element of the stack e.g pixel array
+    void display_top();
 
     // check whether or not the stack is empty or full
     bool is_empty() const;
@@ -45,7 +50,7 @@ private:
 template <typename T>
 void Stack<T>::resize()
 {
-    capacity *= 2;
+    capacity *= 1.5;
     T* new_data = new T[capacity];
     for(int i = 0; i <= top; i++)
         new_data[i] = data[i];
@@ -71,30 +76,51 @@ Stack<T>::~Stack()
 
 // ..................................................................................................
 template <typename T>
-void Stack<T>::push(T elem)
+void Stack<T>::push(T* elem)
 {
     if(is_full())
     resize();       
-    data[++top] = elem;
+    data[++top] = *elem;
 }
 
 // ..................................................................................................
 template <typename T>
-T Stack<T>::pop()     
+T* Stack<T>::pop()     
 {
     if(is_empty())
-        throw std::out_of_range("Stack is empty!");
-    return data[top--];
+    {
+        std::cerr << "Stack is empty!" << std :: endl;
+        return nullptr;
+    }
+    return &data[top--];
 }
 
 // ..................................................................................................
 template <typename T>
-T Stack<T>::get_top() const     
+T* Stack<T>::get_top() const     
 {
     if(is_empty())
-        throw std::out_of_range("Stack is empty!");
-    return data[top];
+    {
+        std::cerr << "Stack is empty!" << std :: endl;
+        return nullptr;
+    }
+    return &data[top];
 }   
+
+// ..................................................................................................
+template <typename T>
+void Stack<T>::display_top()
+{
+    if(is_empty())
+    {
+        std::cerr << "Stack is empty!" << std :: endl;
+        return;
+    }
+    T top_element = data[top];
+    for(int i = 0; i < SIZE_Pi; i++)
+        std :: cout << top_element[i] << " ";
+    std :: cout << std :: endl;
+}
 
 // ..................................................................................................
 template <typename T>
