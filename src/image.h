@@ -1,12 +1,7 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 #include <vector>
-
 #include "vec2t.h"
-
-
-// [[[1]]], [[[2]]]
-
 
 // represents a single r, g, b, a color pixel
 struct Pixel
@@ -18,7 +13,6 @@ struct Pixel
     Pixel(ui8 r, ui8 g, ui8 b, ui8 a);
     Pixel(const Pixel& other);
 };
-
 
 // represents a raster image
 struct Image

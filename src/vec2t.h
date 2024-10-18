@@ -117,7 +117,7 @@ struct vec2t
     }
 };
 
-// ..................................................................................................
+//..................................................................................................
 // equality
 template <typename T>
 bool operator== (const vec2t<T>& lhs, const vec2t<T>& rhs)
@@ -125,7 +125,7 @@ bool operator== (const vec2t<T>& lhs, const vec2t<T>& rhs)
     return lhs.x == rhs.x && lhs.y == rhs.y;
 }
 
-// ..................................................................................................
+//..................................................................................................
 // inequality
 template <typename T>
 bool operator!= (const vec2t<T>& lhs, const vec2t<T>& rhs)
@@ -133,7 +133,7 @@ bool operator!= (const vec2t<T>& lhs, const vec2t<T>& rhs)
     return !(lhs == rhs);
 }
 
-// ..................................................................................................
+//..................................................................................................
 // addition
 template <typename T>
 vec2t<T> operator+ (const vec2t<T>& lhs, const vec2t<T>& rhs)
@@ -141,7 +141,7 @@ vec2t<T> operator+ (const vec2t<T>& lhs, const vec2t<T>& rhs)
     return vec2t<T>(lhs.x + rhs.x, lhs.y + rhs.y);
 }
 
-// ..................................................................................................
+//..................................................................................................
 // subtraction
 template <typename T>
 vec2t<T> operator- (const vec2t<T>& lhs, const vec2t<T>& rhs)
@@ -149,7 +149,7 @@ vec2t<T> operator- (const vec2t<T>& lhs, const vec2t<T>& rhs)
     return vec2t<T>(lhs.x - rhs.x, lhs.y - rhs.y);
 }
 
-// ..................................................................................................
+//..................................................................................................
 // scalar multiplication
 template <typename T>
 vec2t<T> operator* (const vec2t<T>& vec, float scalar)
@@ -157,7 +157,7 @@ vec2t<T> operator* (const vec2t<T>& vec, float scalar)
     return vec2t<T>(vec.x * scalar, vec.y * scalar);
 }
 
-// ..................................................................................................
+//..................................................................................................
 // scalar division
 template <typename T>
 vec2t<T> operator/ (const vec2t<T>& vec, float scalar)
@@ -165,7 +165,7 @@ vec2t<T> operator/ (const vec2t<T>& vec, float scalar)
     return vec2t<T>(vec.x / scalar, vec.y / scalar);
 }
 
-// ..................................................................................................
+//..................................................................................................
 // unary negation
 template <typename T>
 vec2t<T> operator- (const vec2t<T>& vec)
@@ -173,7 +173,7 @@ vec2t<T> operator- (const vec2t<T>& vec)
     return vec2t<T>(-vec.x, -vec.y);
 }
 
-// ..................................................................................................
+//..................................................................................................
 // addition compound assignment
 template <typename T>
 vec2t<T>& operator+= (vec2t<T>& lhs, const vec2t<T>& rhs)
@@ -183,7 +183,7 @@ vec2t<T>& operator+= (vec2t<T>& lhs, const vec2t<T>& rhs)
     return lhs;
 }
 
-// ..................................................................................................
+//..................................................................................................
 // subtraction compound assignment
 template <typename T>
 vec2t<T>& operator-= (vec2t<T>& lhs, const vec2t<T>& rhs)
@@ -193,7 +193,7 @@ vec2t<T>& operator-= (vec2t<T>& lhs, const vec2t<T>& rhs)
     return lhs;
 }
 
-// ..................................................................................................
+//..................................................................................................
 // scalar multiplication compound assignment
 template <typename T>
 vec2t<T>& operator*= (vec2t<T>& vec, float scalar)
@@ -203,7 +203,7 @@ vec2t<T>& operator*= (vec2t<T>& vec, float scalar)
     return vec;
 }
 
-// ..................................................................................................
+//..................................................................................................
 // scalar division compound assignment
 template <typename T>
 vec2t<T>& operator/= (vec2t<T>& vec, float scalar)
@@ -212,7 +212,7 @@ vec2t<T>& operator/= (vec2t<T>& vec, float scalar)
     vec.y /= scalar;
     return vec;
 }
-// ..................................................................................................
+//..................................................................................................
 // to print a vec2t
 template <typename T>
 std::ostream& operator<< (std::ostream& os, const vec2t<T> vec)
@@ -221,7 +221,7 @@ std::ostream& operator<< (std::ostream& os, const vec2t<T> vec)
     return os;
 }
 
-// ..................................................................................................
+//..................................................................................................
 // most common vec2t types
 typedef vec2t<float> vec2;  // this should be used for more accurate mathematical operations
 typedef vec2t<i32> vec2i;

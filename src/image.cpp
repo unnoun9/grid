@@ -3,32 +3,31 @@
 
 extern vec2 window_size;
 
-
-// [[[1]]], [[[2]]]
-
-
-// ................................................. PIXEL .................................................
+//................................................. PIXEL .................................................
 Pixel::Pixel()
 {
 }
 
+//..................................................................................................
 Pixel::Pixel(ui8 r, ui8 g, ui8 b, ui8 a)
     : r(r), g(g), b(b), a(a)
 {
 }
 
+//..................................................................................................
 Pixel::Pixel(ui8 r, ui8 g, ui8 b)
    : r(r), g(g), b(b), a(255)
 {
 }
 
+//..................................................................................................
 Pixel::Pixel(const Pixel& other)
    : r(other.r), g(other.g), b(other.b), a(other.a)
 {
 }
 
 
-// ................................................. IMAGE .................................................
+//................................................. IMAGE .................................................
 bool Image::loadfromfile(const std::string& path, bool uploadtotexture)
 {
     sf::Image sfimage;
@@ -47,7 +46,7 @@ bool Image::loadfromfile(const std::string& path, bool uploadtotexture)
     return true;
 }
 
-
+//..................................................................................................
 bool Image::savetofile(const std::string& path)
 {
     sf::Image sfimage;
@@ -60,7 +59,7 @@ bool Image::savetofile(const std::string& path)
     return true;
 }
 
-
+//..................................................................................................
 void Image::upload_to_texture(sf::Texture* texture)
 {
     texture = (texture == nullptr ? &m_texture : texture);
@@ -75,7 +74,7 @@ void Image::upload_to_texture(sf::Texture* texture)
     m_sprite.setPosition(window_size.x / 2, window_size.y / 2);
 }
 
-
+//..................................................................................................
 Pixel Image::get_pixel(int x, int y)
 {
     if (x < 0 || x > m_size.x || y < 0 || y > m_size.y)
@@ -91,7 +90,7 @@ Pixel Image::get_pixel(int x, int y)
     return { pixel[0], pixel[1], pixel[2], pixel[3] };
 }
 
-
+//..................................................................................................
 void Image::set_pixel(int x, int y, const Pixel& pix)
 {
     if (x < 0 || x > m_size.x || y < 0 || y > m_size.y)

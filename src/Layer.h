@@ -1,11 +1,7 @@
 #pragma once
 #include <string>
-
 #include "vec2t.h"
 #include "Image.h"
-
-// [[[1]]], [[[2]]]
-
 
 // a layer that contains various information
 // graphic pointer should point to an image (pixel array) or some kind of graphic (like text, brush stroke, vector graphic, shapes, etc)

@@ -13,12 +13,10 @@
 #include "filters.h"
 #include <stack>
 
-
-// ................................................. MACROS .................................................
+//................................................. MACROS .................................................
 #define DEBUG 1 // macro to enable or disable custom debugging
 
-
-// ................................................. GLOBALS VARIABLES! .................................................
+//................................................. GLOBALS VARIABLES! .................................................
 sf::RenderWindow window;
 sf::Clock delta_clock;
 bool running = true;
@@ -27,8 +25,7 @@ std::map<std::list<i32>, std::string> action_map;   // maps keys or shortcuts to
 std::list<i32> currently_pressed_keys;              // to track the current shortcut / pressed keys' sequence
 Variables vars;                                     // variables that imgui and actions use and change
 
-
-// ................................................. SOME USEFUL FUNCS .................................................
+//................................................. SOME USEFUL FUNCS .................................................
 // draws a line from point p1 to point p2 of the specified color in the window
 void drawline(vec2 p1, vec2 p2, sf::Color color)
 {
@@ -46,11 +43,10 @@ void quit()
     window.close();
 }
 
-
-// ................................................. MAIN .................................................
+//................................................. MAIN .................................................
 int main()
 {
-    // ................................................. INITIALIZATION .................................................
+    //................................................. INITIALIZATION .................................................
     window.create(sf::VideoMode(window_size.x, window_size.y), "Grid", sf::Style::Default);
     window.setFramerateLimit(60);
     window.setKeyRepeatEnabled(false);
@@ -67,10 +63,10 @@ int main()
     register_action({sf::Keyboard::LControl, sf::Keyboard::Z}, "undo");
     register_action({sf::Keyboard::LControl, sf::Keyboard::Y}, "redo");
 
-    // ................................................. MAIN LOOP .................................................
+    //................................................. MAIN LOOP .................................................
     while (running && window.isOpen())
     {
-        // ................................................. EVENT HANDLING .................................................
+        //................................................. EVENT HANDLING .................................................
         sf::Event event;
         while (window.pollEvent(event))
         {
@@ -155,7 +151,7 @@ int main()
             }
         }
 
-        // ................................................. UPDATE THE STATE OF THE PROGRAM .................................................
+        //................................................. UPDATE THE STATE OF THE PROGRAM .................................................
         ImGui::SFML::Update(window, delta_clock.restart());
         ImGui::ShowDemoWindow();
         
@@ -194,7 +190,7 @@ int main()
             vars.navigate_canvas_right_now = false;
         }
 
-        // ................................................. DRAW / RENDER GUI, CANVAS, AND EVERYTHING ELSE .................................................
+        //................................................. DRAW / RENDER GUI, CANVAS, AND EVERYTHING ELSE .................................................
         window.clear();
 
         // menu bar at the top
@@ -222,7 +218,7 @@ int main()
         window.display();
     }
 
-    // ................................................. DE-INITIALIZATION .................................................    
+    //................................................. DE-INITIALIZATION .................................................    
     ImGui::SFML::Shutdown();
     return 0;
 }

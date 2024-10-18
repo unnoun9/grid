@@ -4,6 +4,7 @@
 #include "vec2t.h"
 
 
+// holds data related to user inputs
 struct Action
 {
     enum Action_type

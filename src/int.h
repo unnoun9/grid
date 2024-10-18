@@ -2,7 +2,7 @@
 
 // these are just typedefs or aliases for the sake of clarity, consistency and convenience
 // in this project use them instead of any other integer types
-// i means int, u means unsigned, number postfix means the number of bytes it should occupy in memory
+// 'i' means int, 'u' means unsigned, number postfix means the number of bytes it should occupy in memory
 
 typedef unsigned char ui8;
 typedef char i8;

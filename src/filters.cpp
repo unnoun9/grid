@@ -1,9 +1,9 @@
 #include <iostream>
-
 #include "filters.h"
 #include "util.hpp"
 #include "int.h"
 
+// ..................................................................................................
 void filters::gray_scale(Image &img)
 {
     for (int y = 0; y < img.m_size.y; y++)

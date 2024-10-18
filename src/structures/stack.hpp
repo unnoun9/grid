@@ -1,12 +1,5 @@
 #pragma once
-#include<iostream>
-
 #include "int.h"
-
-// [[[0]]] - implement an efficient dynamic array based stack -- template argument must by the type of the data
-
-#define SIZE 10 //default size
-#define SIZE_Pi 50000000    //default size of pixel array
 
 namespace ds
 {
@@ -15,8 +8,8 @@ namespace ds
 template <typename T>
 struct Stack
 {
-    Stack(int size = SIZE); 
-    ~Stack();
+    Stack(int capacity=2);  // construct a stack of `size`
+    ~Stack();               // clear and de-allocate everything
 
     // push element on the top of stack, resize if stack is full
     void push(T* elem);
@@ -25,115 +18,97 @@ struct Stack
     T* pop();
 
     // get the top element of the stack
-    T* get_top() const;
+    T* top() const;
 
-    // display the top element of the stack e.g pixel array
-    void display_top();
-
-    // check whether or not the stack is empty or full
+    // see whether the stack is empty
     bool is_empty() const;
+
+    // see whether the stack is already full
     bool is_full() const;
 
-private:
-    // The actual data
-    T* data;
-    // pointer/index to the top element
-    i32 top;
-    // number of elements that can fit in the current allocated memory
-    i32 capacity;
+private:  
+    T* m_data{};            // The actual data
+    ui32 m_top = -1;        // pointer/index to the top element
+    ui32 m_capacity = 0;    // number of elements that can fit in the current allocated memory
     
-    // function to resize the stack when capacity is reached
+    // to resize the stack when capacity is reached
     void resize();
 };
 
-// ..................................................................................................
+//..................................................................................................
 template <typename T>
-void Stack<T>::resize()
+Stack<T>::Stack(int capacity)
+    : m_capacity(capacity)
+    , m_data(new T[m_capacity])
 {
-    capacity *= 1.5;
-    T* new_data = new T[capacity];
-    for(int i = 0; i <= top; i++)
-        new_data[i] = data[i];
-    delete[] data;
-    data = new_data;
 }
 
-// ..................................................................................................
-template <typename T>
-Stack<T>::Stack(int size)
-{
-    capacity = size;
-    top = -1;
-    data = new T[capacity];
-}
-
-// ..................................................................................................
+//..................................................................................................
 template <typename T>
 Stack<T>::~Stack()
 {
-    delete[] data;
+    delete[] m_data;
 }
 
-// ..................................................................................................
+//..................................................................................................
+template <typename T>
+void Stack<T>::resize()
+{
+    m_capacity *= 1.5;
+    T* new_data = new T[m_capacity];
+
+    for (ui32 i = 0; i <= m_top; i++)
+        new_data[i] = m_data[i];
+
+    delete[] m_data;
+    m_data = new_data;
+}
+
+//..................................................................................................
 template <typename T>
 void Stack<T>::push(T* elem)
 {
-    if(is_full())
+    if (is_full())
     resize();       
-    data[++top] = *elem;
+    m_data[++m_top] = *elem;
 }
 
-// ..................................................................................................
+//..................................................................................................
 template <typename T>
 T* Stack<T>::pop()     
 {
-    if(is_empty())
+    if (is_empty())
     {
         std::cerr << "Stack is empty!" << std :: endl;
         return nullptr;
     }
-    return &data[top--];
+    return &m_data[m_top--];
 }
 
-// ..................................................................................................
+//..................................................................................................
 template <typename T>
-T* Stack<T>::get_top() const     
+T* Stack<T>::top() const     
 {
-    if(is_empty())
+    if (is_empty())
     {
         std::cerr << "Stack is empty!" << std :: endl;
         return nullptr;
     }
-    return &data[top];
+    return &m_data[m_top];
 }   
 
-// ..................................................................................................
-template <typename T>
-void Stack<T>::display_top()
-{
-    if(is_empty())
-    {
-        std::cerr << "Stack is empty!" << std :: endl;
-        return;
-    }
-    T top_element = data[top];
-    for(int i = 0; i < SIZE_Pi; i++)
-        std :: cout << top_element[i] << " ";
-    std :: cout << std :: endl;
-}
-
-// ..................................................................................................
+//..................................................................................................
 template <typename T>
 bool Stack<T>::is_empty() const
 {
-    return top == -1;
+    return m_top < 0;
 }
 
-// ..................................................................................................
+//..................................................................................................
 template <typename T>
 bool Stack<T>::is_full() const
 {
-    return top + 1 == capacity;
+    return m_top >= m_capacity - 1;
 }    
 
-}
+} // end namespace ds

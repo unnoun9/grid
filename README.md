@@ -16,6 +16,165 @@
 - `fonts` directory just has a font which may be removed, we'll see.
 - `.vscode` folder just has the `launch.json` file that helps in launching `gdb` debugger (if it is installed on your machine). First the `bin/grid.exe` must be present, then will the `launch.json` start the debugger (F5 is the shortcut in VS Code, I believe).
 
+## Preferred Style for this Project (PLEASE FOLLOW THIS)
+- `Note:` I could not mention everything here, so observe the examples below and the code in `src` directory for stuff not mentioned.
+- Commit messages should be lowercased, follow english punchuation rules to some extent, and sentences in them should be separated by double hypher `--` that has a space on each side of it. See the blow Examples.
+    ```
+    a very usefull commit message -- some more details here -- bug is finaly fixed!! -- more TODOS added
+    ```
+    ```
+    shaders are finally added, but their effect is not to be seen anywhere when the final image is exported -- canvas is finaly perfected!
+    ``` 
+- Comments in the code should be in lowercase. Each `//` must follow with a space. Sentences must be separated with a newline comment or a `;`. See the below Examples.
+    ```cpp
+    // sphinx of the black quartz, judge my vow!; what the bugha?!; the quick brown fox does some crazy shit...
+    ```
+    ```cpp
+    // sphinx of the black quartz, judge my vow!
+    // what the bugha?!
+    // the quick brown fox does some crazy shit...
+    ```
+    * For super large files, follow the convention of separating **functions** or **logic** with:
+        ```
+        //..................................................................................................
+        ```
+    * Or if deemed necessary, with this:
+        ```
+        //................................................. SOME DESCRIPTIVE HEADING .................................................
+
+        ```
+
+- Identifiers' (variables, function names, custom types, etc) name in these styles: `flatcase / lowercase`, `snake_case / underscore_method`, `UPPERCASE / SCREAMINGCASE`, `SCREAMING_SNAKE_CASE`, `Pascal_Snake_Case / Tile_Case`, `First_capital_case / Semi_title_case`.
+    * Structs, classes and enums must be named in either `Pascal_Snake_Case` if possible, otherwise `First_capital_case`.
+    * Variables, and function must be named using `flatcase` if possible, otherwise `snake_case`. Macros must use `SCREAMINGCASE` if possible, otherwise `SCREAMIN_SNAKE_CASE`.
+    * No other styles are acceptable as they look ugly, especially `SnakeCase / snakeCase` which is quite common.
+    * See some examples below.
+        ``` cpp
+        float some_value;  // good and preferred
+        float somevalue;   // good only if readable at first glance
+        float someValue;   // aweful
+
+        #define NUM_PIXELS 727 * 272  // good and preferred
+        #define NUMPIXELS  727 * 272  // good only if readable at first glance
+        #define num_pixles 727 * 272  // bad
+        #define Num_Pixels 727 * 272  // bad
+        #define Num_pixels 727 * 272  // bad
+        #define numPixels  727 * 272  // aweful
+        #define NumPixels  727 * 272  // aweful
+
+        void load_from_file(const std::string filepath); // good
+        void loadfromfile(const std::string& file_path); // good only if readable at first glance
+        void loadFromFile(const std::string& FilePath);  // aweful
+        void LoadFromFile(const std::string& filePath);  // aweful
+
+        struct dynamic_array; // good and preferred only if it is in a namespace
+        struct Dynamic_Array; // good and preferred
+        struct Dynamic_array; // good
+        struct DynamicArray;  // aweful
+
+        ```
+- If any function or structs/classes have declarations in a file, and there is a need to document/explain it through comments, then those comments should be in the declarations not in the definitions, unless again, there is no declaration.
+- Use `Allman` indentation with 4 tab spaces as spaces not tabs for control structure blocks, functions, structs, and classes.
+    ``` cpp
+    some_block
+    {
+        some_nested_block
+        {
+            // ...
+        }
+    }
+    ```
+- Use `K&R` style indentation for initializing through the **initializer list** and  **namespaces**.
+    ``` cpp
+    some_namespace {
+
+        // ...
+
+    }
+    ```
+    ``` cpp
+    T array = { /* elements */  };
+    ```
+    ``` cpp
+    T array = {
+        // a lot of elements (perhaps the array is multi-dimensional)
+    };
+    ```
+- Use `structs` rather than `class`.
+    * Again, a struct's declaration must have comments about what its variables represent and what its functions do. The definition of functions will only contain comments, if needed, inside the function to explain some tricky thing happening in there.
+    * If there are private members, a struct must have only one `private:` sub-section at the end, not at the beginning. There will be no `public:` keyword used.
+    * Variables must be at the top in a section of a struct and functions at the bottom.
+    * Example of a struct with a private member:
+        ```cpp
+        namespace stl {
+        
+        template <typename T>
+        struct vector
+        {
+            vector(); // creates a vector of size 2 by default
+            vector(const vector& other); // specifies how vectors will be deep copied
+            vector(vector&& other); // specifies how vectors will be "moved"
+            vector(ui32 capacity); // creates a vector of given capacity
+            ~vector(); // clears everything
+
+            // get the size
+            inline ui32 size() const;
+
+            // access the actual data
+            Type* data() const;
+
+            // push and element at the end of the vector
+            void append(const Type& element);
+            
+            // more functions...
+            // ...
+
+            // to access the i-th element
+            const Type& operator[] (ui32 index) const;
+
+            // to modify the i-th element
+            Type& operator[] (ui32 index);
+
+            // more operators...
+            // ...s
+
+        private:
+            T* m_data{};          // the actual data
+            ui32 m_size = 0;        // to track the current size
+            ui32 m_capacity = 2;    // the actual space allocated in terms of number of `Type` that can be appended
+
+            // allocater; allocates memory and moves everything to that memory
+            void reallocate(ui32 new_capacity);
+        };
+
+        //..................................................................................................
+        // constructors and other functions...
+        // ...
+
+        //..................................................................................................
+        template <typename T>
+        void vector<T>::reallocate(ui32 new_capacity)
+        {
+            T* new_block = new T[new_capacity];
+
+            // what if we are decreasing the capacity
+            if (new_capacity < m_size) m_size = new_capacity;
+
+            // move the data to new block
+            for (ui32 i = 0; i < m_size; i++)
+            {
+                new_block[i] = m_data[i];
+            }
+
+            // update internal variables
+            delete[] m_data;
+            m_data = new_block;
+            m_capacity = new_capacity;
+        }
+
+        } // end stl namespace
+        ```
+
 ## Our Source Code (`src` directory)
 - `main.cpp` has the `main()` function and the *main* `while` loop. In `main()` a window is created and then in the loop, events are handled, the state of the program is updated and finally the state of the program is rendered / drawn (very similar to a structure of a game).
     - `#define DEBUG 1` is a macro which I intend to use only where I'm outputting some information that may be helpful in catching some bugs. Changing it's value to 0 should disable those output information.
@@ -39,7 +198,7 @@
 - `filters.h` and `filters.cpp` will contain filter functions that use the CPU (for now) to edit the pixels. Currently it only contains the grayscale filter. More (with shaders) will be added once the canvas if finished.
 
 ## TODOs
-- `TODOs` are listed below here. Do look at them. Note that `[[[x]]]` in a TODO just gives a unique identifier. Through out the code that same `[[[x]]]` will be scene, which just means that the `x` TODO is belongs/relates to that code somehow.
+- `TODOs` are listed below here. Do look at them. Note that `[[[x]]]` in a TODO just gives a unique identifier. Through out the code that same `[[[x]]]` may (or may not) be scene, which just means that the `x` TODO is belongs/relates to that code somehow.
     * `[[[0]]]` Make template data structures and helper classes:
           - static array
           - dynamic array
