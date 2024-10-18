@@ -59,7 +59,7 @@
         #define numPixels  727 * 272  // aweful
         #define NumPixels  727 * 272  // aweful
 
-        void load_from_file(const std::string filepath); // good
+        void load_from_file(const std::string& filepath); // good
         void loadfromfile(const std::string& file_path); // good only if readable at first glance
         void loadFromFile(const std::string& FilePath);  // aweful
         void LoadFromFile(const std::string& filePath);  // aweful
@@ -93,7 +93,7 @@
        ``` cpp
        float array[SIZE] = { /* elements */  };
 
-       ui8 pixels[W * H] = {
+       ui8 pixels[W * H * 4] = {
            // a lot of elements (perhaps the array is multi-dimensional)
        };
        ```
