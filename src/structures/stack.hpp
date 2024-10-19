@@ -60,20 +60,6 @@ Stack<T>::~Stack()
 
 //..................................................................................................
 template <typename T>
-void Stack<T>::resize()
-{
-    m_capacity *= 1.5;
-    T* new_data = new T[m_capacity];
-
-    for (ui32 i = 0; i <= m_top; i++)
-        new_data[i] = m_data[i];
-
-    delete[] m_data;
-    m_data = new_data;
-}
-
-//..................................................................................................
-template <typename T>
 void Stack<T>::push(const T& elem)
 {
     if (is_full())
@@ -88,7 +74,7 @@ T& Stack<T>::pop(bool& success)
     if (is_empty())
     {
         success = false;
-        std::cerr << "Stack is empty! Cannot pop." << std :: endl;
+        std::cerr << "Stack is empty! Cannot pop." << std::endl;
         return *reinterpret_cast<T*>(nullptr);  // return null reference
     }
     success = true;
@@ -102,7 +88,7 @@ T& Stack<T>::top(bool& success) const
     if(is_empty())
     {
         success = false;
-        std::cerr << "Stack is empty! There is no top." << std :: endl;
+        std::cerr << "Stack is empty! There is no top." << std::endl;
         return *reinterpret_cast<T*>(nullptr);  // return null reference
     }
     success = true;
@@ -149,5 +135,19 @@ bool Stack<T>::is_full() const
 {
     return m_top >= m_capacity - 1;
 }    
+
+//..................................................................................................
+template <typename T>
+void Stack<T>::resize()
+{
+    m_capacity *= 1.5;
+    T* new_data = new T[m_capacity];
+
+    for (ui32 i = 0; i <= m_top; i++)
+        new_data[i] = m_data[i];
+
+    delete[] m_data;
+    m_data = new_data;
+}
 
 } // end namespace ds
