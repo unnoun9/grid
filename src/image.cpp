@@ -1,8 +1,6 @@
 #include "image.h"
 #include <cassert>
 
-extern vec2 window_size;
-
 //................................................. PIXEL .................................................
 Pixel::Pixel()
 {
@@ -26,9 +24,15 @@ Pixel::Pixel(const Pixel& other)
 {
 }
 
-
 //................................................. IMAGE .................................................
-bool Image::loadfromfile(const std::string& path, bool uploadtotexture)
+Raster::Raster(vec2 center)
+    : m_center(center)
+{
+    m_sprite.setPosition(center);
+}
+
+//..................................................................................................
+bool Raster::loadfromfile(const std::string& path, bool uploadtotexture)
 {
     sf::Image sfimage;
     if (!sfimage.loadFromFile(path))
@@ -40,6 +44,7 @@ bool Image::loadfromfile(const std::string& path, bool uploadtotexture)
     m_size = sfimage.getSize();
     m_pixels.resize(m_size.x * m_size.y * 4);
     memcpy(m_pixels.data(), sfimage.getPixelsPtr(), m_pixels.size());
+    m_sprite.setOrigin(m_size.x / 2, m_size.y / 2);
 
     if (uploadtotexture) upload_to_texture(nullptr);
 
@@ -47,7 +52,7 @@ bool Image::loadfromfile(const std::string& path, bool uploadtotexture)
 }
 
 //..................................................................................................
-bool Image::savetofile(const std::string& path)
+bool Raster::savetofile(const std::string& path)
 {
     sf::Image sfimage;
     sfimage.create(m_size.x, m_size.y, m_pixels.data());
@@ -60,7 +65,7 @@ bool Image::savetofile(const std::string& path)
 }
 
 //..................................................................................................
-void Image::upload_to_texture(sf::Texture* texture)
+void Raster::upload_to_texture(sf::Texture* texture)
 {
     texture = (texture == nullptr ? &m_texture : texture);
     if (!texture->create(m_size.x, m_size.y))
@@ -70,12 +75,10 @@ void Image::upload_to_texture(sf::Texture* texture)
     }
     texture->update(m_pixels.data());
     m_sprite.setTexture(*texture, true);
-    m_sprite.setOrigin(m_size.x / 2, m_size.y / 2);
-    m_sprite.setPosition(window_size.x / 2, window_size.y / 2);
 }
 
 //..................................................................................................
-Pixel Image::get_pixel(int x, int y)
+Pixel Raster::get_pixel(int x, int y)
 {
     if (x < 0 || x > m_size.x || y < 0 || y > m_size.y)
     {
@@ -91,7 +94,7 @@ Pixel Image::get_pixel(int x, int y)
 }
 
 //..................................................................................................
-void Image::set_pixel(int x, int y, const Pixel& pix)
+void Raster::set_pixel(int x, int y, const Pixel& pix)
 {
     if (x < 0 || x > m_size.x || y < 0 || y > m_size.y)
     {

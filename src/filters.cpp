@@ -4,7 +4,7 @@
 #include "int.h"
 
 // ..................................................................................................
-void filters::gray_scale(Image &img)
+void filters::gray_scale(Raster &img)
 {
     for (int y = 0; y < img.m_size.y; y++)
     {

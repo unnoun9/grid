@@ -2,9 +2,6 @@
 #include <ImGuiFileDialog.h>
 #include "gui.h"
 
-extern vec2 window_size;
-extern void quit();
-
 //..................................................................................................
 // the main menu bar
 void gui::show_menu_bar(Variables& vars)
@@ -25,11 +22,6 @@ void gui::show_menu_bar(Variables& vars)
             if (ImGui::MenuItem("Save As..", "Ctrl+ShiftS"))
             {
                 vars.show_saveas_img_dialog = true;
-            }
-            ImGui::Separator();
-            if (ImGui::MenuItem("Quit", "Alt+F4"))
-            {
-                quit();
             }
             ImGui::EndMenu();
         }

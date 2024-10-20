@@ -102,6 +102,10 @@ void do_action(const Action& action)
         else if (action.name == "redo")
         {
         }
+        else if (action.name == "reset_canvas_navigation")
+        {
+            vars.navigate_canvas_reset = true;
+        }
     }
     else if (action.type == Action::END)
     {
