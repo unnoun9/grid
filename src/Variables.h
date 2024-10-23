@@ -13,6 +13,7 @@ struct Variables
 
     // canvas-related
     bool navigate_canvas_right_now = false;
+    bool navigate_canvas_reset = false;
     float scroll_ticks = 0;
     float canvas_zoom_factor = 1;
     bool pan_start = false;

@@ -4,6 +4,6 @@
 // image filters that manipulate pixels
 namespace filters {
 
-    void gray_scale(Image& img);
+    void gray_scale(Raster& img);
     
 }
