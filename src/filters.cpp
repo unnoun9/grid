@@ -19,3 +19,20 @@ void filters::gray_scale(Raster &img)
         }
     }
 } 
+
+void filters::color_mask(Raster& img, float r, float g, float b) {
+    for (int y = 0; y < img.m_size.y; y++) {
+        for (int x = 0; x < img.m_size.x; x++) {
+            Pixel pix = img.get_pixel(x, y);
+            // Clamp r, g, b to the 0-255 range to avoid overflow when casting to ui8
+            i32 new_r = r * pix.r;
+            i32 new_g = g * pix.g;
+            i32 new_b = b * pix.b;
+            util::clamp(new_r, 0, 255);
+            util::clamp(new_g, 0, 255);
+            util::clamp(new_b, 0, 255);
+            img.set_pixel(x, y, {(ui8)new_r, (ui8)new_g, (ui8)new_b, (ui8)pix.a});
+        }
+    }
+}
+

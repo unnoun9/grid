@@ -5,5 +5,6 @@
 namespace filters {
 
     void gray_scale(Raster& img);
+    void color_mask(Raster& img, float r, float g, float b);
     
 }
