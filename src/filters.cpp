@@ -20,7 +20,7 @@ void filters::gray_scale(Raster &img)
     }
 } 
 
-void filters::color_mask(Raster& img, float r, float g, float b) {
+void filters::color_mask(Raster& img, float r, float g, float b) {     //r,g and b are fractions of red,green and blue resp
     for (int y = 0; y < img.m_size.y; y++) {
         for (int x = 0; x < img.m_size.x; x++) {
             Pixel pix = img.get_pixel(x, y);
