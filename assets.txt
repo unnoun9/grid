@@ -1,0 +1,7 @@
+Texture     1NoTool          assets/icons/tool-no.png
+Texture     2MoveTool        assets/icons/tool-move.png
+Texture     3BrushTool       assets/icons/tool-brush.png
+Texture     4EraserTool      assets/icons/tool-eraser.png
+Texture     5FillTool        assets/icons/tool-fill.png
+
+Font        CaviarDreams    assets/fonts/caviar-dreams.ttf

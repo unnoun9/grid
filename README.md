@@ -219,7 +219,7 @@
     * `make` in the terminal, if you have make installed. `make` uses the `Makefile`. The advantage of `make` is that it does not recompile everything for no reason. It only compiles and links the recently changed files.
     * Or `./build.sh`. On windows, I recommend getting the git bash terminal (or the sh.exe executable) that comes with [git](https://git-scm.com/) to run the scripts. `build.sh` is good and all but it will recompile everything, and so will take longer to run and test the program after tiny changes.
     * `Note:` Sometimes `Makefile` will not recompile the header files. So when you make a change in the header files, and after running `make` you notice no change, then first `make clean` then run `make` again to build freshly.
-- `imgui.sh` is just thier to automatically compile (only compile not link) the imgui source code. It just automates some manual labour. Probably not that important but is handy.
+- `imgui.sh` is just there to automatically compile (only compile not link) the imgui source code. It just automates some manual labour. Probably not that important but is handy.
 - `build.sh`(shell script) will compile and link our source code to libraries and run the executable.
 - `Makefile` uses `make` to do the exact same thing as `build.sh` but in a more efficient way.
 - `bin` directory will contain the final executable along with SFML dll files to dynamically link us to SFML. The program won't run without these dll files.

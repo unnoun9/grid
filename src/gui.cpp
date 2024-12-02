@@ -37,6 +37,8 @@ void gui::show_menu_bar(Variables& vars)
         if (ImGui::BeginMenu("View"))
         {
             if (ImGui::MenuItem("Menu bar", "Alt", &vars.show_menu_bar));
+            ImGui::Separator();
+            if (ImGui::MenuItem("Use Transparent Checker Shader", NULL, &vars.use_checker_shader));
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Filters"))
@@ -55,7 +57,7 @@ void gui::show_open_dialog(Variables& vars)
     if (!vars.show_open_img_dialog) return;
 
     IGFD::FileDialogConfig config;
-    config.path = ".";
+    config.path = "./test_imgs/"; // don't forget to change this back to something like "."
     config.flags = ImGuiFileDialogFlags_Modal; // prevent interacting with app if dialog is open
     config.fileName = "";
 

@@ -1,6 +1,6 @@
 #pragma once
 #include "Variables.h"
-#include "Image.h"
+#include "Raster.h"
 
 // functions that call ImGui's functions to draw gui
 namespace gui {

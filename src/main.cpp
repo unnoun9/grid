@@ -10,8 +10,8 @@
 #include "Variables.h"
 #include "util.hpp"
 #include "Canvas.h"
-#include "filters.h"
-#include <stack>
+#include "Assets.h"
+#include "Tools.h"
 
 //................................................. MACROS .................................................
 #define DEBUG 1 // macro to enable or disable custom debugging
@@ -20,15 +20,16 @@
 std::map<std::list<i32>, std::string> action_map;   // maps keys or shortcuts to action names
 std::list<i32> currently_pressed_keys;              // to track the current shortcut / pressed keys' sequence
 Variables vars;                                     // variables that imgui and actions use and change
-bool shaders_available = true;
+bool shaders_available = true;                      // tracks whether shaders are available in the machine
+extern const char* layer_types_str[];               // see Layer.h
 
 //................................................. SOME USEFUL FUNCS .................................................
 // draws a line from point p1 to point p2 of the specified color in the window
 void drawline(vec2 p1, vec2 p2, sf::Color color, sf::RenderWindow& window)
 {
     sf::Vertex line[] = {
-        sf::Vertex(vec2(p1.x, p1.y), color),
-        sf::Vertex(vec2(p2.x, p2.y), color)
+        { vec2(p1.x, p1.y), color },
+        { vec2(p2.x, p2.y), color }
     };
     window.draw(line, 2, sf::Lines);   
 }
@@ -41,11 +42,11 @@ void quit(bool& running, sf::RenderWindow& window)
 }
 
 //................................................. MAIN .................................................
-int main()
+i32 main()
 {
     //................................................. INITIALIZATION .................................................
-    sf::RenderWindow window(sf::VideoMode(1500, 800), "Grid", sf::Style::Default);
-    window.setFramerateLimit(60);
+    sf::RenderWindow window(sf::VideoMode(1800, 1000), "Grid", sf::Style::Default);
+    window.setVerticalSyncEnabled(true);
     window.setKeyRepeatEnabled(false);
     sf::Clock delta_clock;
     bool running = true;
@@ -55,7 +56,6 @@ int main()
     ImGui::SFML::Init(window);
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    vec2 mouse_pos;
 
     if (!sf::Shader::isAvailable())
     {
@@ -66,9 +66,22 @@ int main()
     }
 
     // the one and the only, canvas!
-    Canvas canvas(vec2(window.getSize().x * 0.75, window.getSize().y * 0.9));
+    Canvas canvas(vec2(window.getSize().x * 0.7, window.getSize().y * 0.85), &window);
+    i32 current_blend_mode_selected = 0;
 
-    // register keybinds or shortcuts
+    // da tools
+    Tools tools(&canvas);
+    const char* tools_tooltips[Tools::NUM_TOOLS] = {    // used by imgui tooltips
+        "No tool. Literally no tool is selected at all..",
+        "Move tool. Moves layers using the mouse input.",
+        "Brush tool. The typical paint brush tool that can paint over layers, given its settings.",
+        "Eraser tool. Erases contents of a layer.",
+        "Fill tool. Flood fills a color onto a valid region of a layer."
+    };
+
+    // load the assets and register keybinds or shortcuts
+    Assets assets;
+    assets.loadfromfile("assets.txt");
     register_action({sf::Keyboard::LAlt}, "toggle_menubar");
     register_action({sf::Keyboard::LControl, sf::Keyboard::N}, "new");
     register_action({sf::Keyboard::LControl, sf::Keyboard::O}, "open");
@@ -91,7 +104,7 @@ int main()
             if (event.type == sf::Event::Closed)
                 quit(running, window);
 
-            // will probably remove this when done, this is just a convenient way to exit the application
+            // will probably remove this when done; this is just a convenient way to exit the application
             if (event.type == sf::Event::KeyPressed)
                 if (event.key.code == sf::Keyboard::Escape)
                     quit(running, window);
@@ -113,7 +126,7 @@ int main()
                 // remember the pressed key
                 currently_pressed_keys.emplace_back(event.key.code);
 
-                // no need to process the key if it isn't in the action map
+                // no need to process the keys if it isn't in the action map
                 if (action_map.find(currently_pressed_keys) == action_map.end())
                     continue;
 
@@ -128,16 +141,39 @@ int main()
 
             // main mouse events below
             auto mpos = sf::Mouse::getPosition(window);
-            mouse_pos = vec2(mpos.x, mpos.y);
+            vars.mouse_pos = vec2(mpos.x, mpos.y);
 
             // when a mouse button is pressed
             if (event.type == sf::Event::MouseButtonPressed)
             {
                 switch (event.mouseButton.button)
                 {
-                case sf::Mouse::Left:   { do_action(Action("left_click", Action::START, mouse_pos)); break; }
-                case sf::Mouse::Middle: { do_action(Action("middle_click", Action::START, mouse_pos)); break; }
-                case sf::Mouse::Right:  { do_action(Action("right_click", Action::START, mouse_pos)); break; }
+                case sf::Mouse::Left:
+                {
+                    if (tools.layer)
+                    {
+                        // the following is the move tool's activation logic
+                        vec2 layer_size;
+                        if (tools.layer->type == Layer::RASTER)
+                            layer_size = ((Raster*)tools.layer->graphic)->data.getSize();
+                        // handle other layer types
+                        else;
+
+                        vec2 mouse_p = canvas.window_texture.mapPixelToCoords((vec2i)(vars.mouse_pos - tools.canvas->window_pos));
+                        sf::FloatRect bounds(tools.layer->pos, layer_size);
+
+                        if (bounds.contains(mouse_p))
+                        {
+                            tools.is_dragging = true;
+                            tools.layer_offset = mouse_p - tools.layer->pos;
+                        }
+                    }
+
+                    do_action(Action("left_click", Action::START, vars.mouse_pos));
+                    break;
+                }
+                case sf::Mouse::Middle: { do_action(Action("middle_click", Action::START, vars.mouse_pos)); break; }
+                case sf::Mouse::Right:  { do_action(Action("right_click", Action::START, vars.mouse_pos)); break; }
                 default: { break; }
                 }
             }
@@ -147,9 +183,15 @@ int main()
             {
                 switch (event.mouseButton.button)
                 {
-                case sf::Mouse::Left:   { do_action(Action("left_click", Action::END, mouse_pos)); break; }
-                case sf::Mouse::Middle: { do_action(Action("middle_click", Action::END, mouse_pos)); break; }
-                case sf::Mouse::Right:  { do_action(Action("right_click", Action::END, mouse_pos)); break; }
+                case sf::Mouse::Left:
+                {
+                    tools.is_dragging = false;
+
+                    do_action(Action("left_click", Action::END, vars.mouse_pos));
+                    break;
+                }
+                case sf::Mouse::Middle: { do_action(Action("middle_click", Action::END, vars.mouse_pos)); break; }
+                case sf::Mouse::Right:  { do_action(Action("right_click", Action::END, vars.mouse_pos)); break; }
                 default: { break; }
                 }
             }
@@ -174,39 +216,160 @@ int main()
         ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
         ImGui::ShowDemoWindow();
         
-        // canvas
+        // draw canvas' stuff to the RenderTexture
         canvas.draw();
 
-        // canvas window
+        // the canvas window
         ImGui::Begin("Canvas", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+        // resizing and is mouse over the canvas logic
         ImVec2 current_canv_win_size = ImGui::GetWindowSize();
         if (current_canv_win_size.x != canvas.window_size.x || current_canv_win_size.y != canvas.window_size.y)
             canvas.window_size = vec2(ImGui::GetWindowSize().x, ImGui::GetWindowSize().y);
-        ImGui::Image(canvas.texture.getTexture().getNativeHandle(), ImVec2(canvas.texture.getSize().x, canvas.texture.getSize().y), ImVec2(0, 1), ImVec2(1, 0));
+        ImVec2 canv_window_pos = ImGui::GetWindowPos();
+        bool is_mouse_over_canvas_window = ImGui::IsMouseHoveringRect(canv_window_pos, ImVec2(canv_window_pos.x + current_canv_win_size.x, canv_window_pos.y + current_canv_win_size.y));
+        canvas.window_pos.x = canv_window_pos.x + 8 * canvas.zoom_factor;
+        canvas.window_pos.y = canv_window_pos.y + 26 * canvas.zoom_factor;
+        // draw the canvas' RenderTexture
+        ImGui::Image(canvas.window_texture.getTexture().getNativeHandle(), ImVec2(canvas.window_texture.getSize().x, canvas.window_texture.getSize().y), ImVec2(0, 1), ImVec2(1, 0));
         ImGui::End();
 
+        // the layers panel
+        ImGui::Begin("Layers");
+        // ability to customize the currently selected layer
+        if (canvas.current_select_layer)
+        {
+            if (ImGui::Combo("Blend Mode", &current_blend_mode_selected, layer_blend_str, IM_ARRAYSIZE(layer_blend_str)))
+                canvas.current_select_layer->blend = (Layer::Blend_mode)current_blend_mode_selected;
+            ImGui::SliderFloat("Opacity", &canvas.current_select_layer->opacity, 0, 100, "%.1f");
+            ImGui::InputText("Name", (char*)canvas.current_select_layer->name.c_str(), 64);
+            ImGui::Text("Layer type: %s", canvas.current_select_layer->type_or_blend_to_cstr());
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::Spacing();
+        }
+        // each layer interactable widget
+        for (i32 n = canvas.layers.size() - 1; n >= 0; n--)
+        {
+            Layer& layer = canvas.layers[n];
+            ImGui::PushID(n);
+            
+            ImGui::Checkbox("##", &layer.is_visible);
+            ImGui::SameLine();
+            bool is_selected = canvas.current_select_layer == &layer;
+            if (ImGui::Selectable(layer.name.c_str(), is_selected))
+                canvas.current_select_layer = &layer;
+
+            // drag and drop functionality
+            if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
+            {
+                ImGui::SetDragDropPayload("LAYER_REORDER", &n, sizeof(i32));
+                ImGui::Text("Move %s", layer.name.c_str());
+                ImGui::EndDragDropSource();
+            }
+            if (ImGui::BeginDragDropTarget())
+            {
+                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("LAYER_REORDER"))
+                {
+                    IM_ASSERT(payload->DataSize == sizeof(i32));
+                    i32 payload_n = *(const i32*)payload->Data;
+                    // inserting the dragged layer to the target location and shift others accordingly
+                    if (payload_n != n)
+                    {
+                        Layer moved_layer = std::move(canvas.layers[payload_n]);
+                        canvas.layers.erase(canvas.layers.begin() + payload_n);
+                        canvas.layers.insert(canvas.layers.begin() + n, std::move(moved_layer));
+                    }
+                }
+                ImGui::EndDragDropTarget();
+            }
+            ImGui::PopID();
+            ImGui::SameLine();
+            ImGui::Text("(%.0f,%.0f)", layer.pos.x, layer.pos.y);
+        }
+        ImGui::End();
+
+        // the tools panel
+        ImGui::Begin("Tools");
+        i32 i = 0;
+        for (auto& [tool_name, tool_texture] : assets.texture_map)
+        {
+            bool is_selected = i == tools.current_tool;
+            // push highlighted style if this is the current tool
+            if (is_selected)
+            {
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.8f, 0.8f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.9f, 0.9f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));
+            }
+
+            // clicked tool is activated, rest are deactivated
+            if (ImGui::ImageButton(tool_name.c_str(), tool_texture.getNativeHandle(), ImVec2(22, 22)))
+            {
+                tools.current_tool = i;
+            }
+
+            // only pop if we pushed
+            if (is_selected)
+            {
+                ImGui::PopStyleColor(3);
+            }
+
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_Stationary))
+                ImGui::SetTooltip(tools_tooltips[i]);
+            ImGui::SameLine();
+            i++;
+        }
+        ImGui::End();
+
+        // use a tool
+        tools.layer = canvas.current_select_layer;
+        tools.use_current_tool[tools.current_tool](tools);
+
+        // menu bar at the top
+        if (vars.show_menu_bar) gui::show_menu_bar(vars);
+        if (vars.show_open_img_dialog) gui::show_open_dialog(vars);
+        if (vars.show_saveas_img_dialog) gui::show_saveas_dialog(vars);
+
         // open image (in a separate canvas window?)
+        // (maybe ask the user a question to see whether they want to open the image in a new canvas or in the same)
+        // (if in the same canvas then the following behaviour is correct, i think)
+        // (otherwise, maybe create a new canvas variable and push it to std::vector<Canvas>??)
         if (vars.open_image)
         {
-            // load the image
-            Raster* img = new Raster(canvas.window_size / 2);
-            img->loadfromfile(vars.open_path, true);
+            Raster* img = new Raster();
+            if (img->loadfromfile(vars.open_path))
+            {
+                vec2 img_size = img->data.getSize();
+                std::string name = canvas.initialized ? canvas.default_layer_name() : "background";
 
-            // update the canvas variables and find the correct zoom factor
-            canvas.size = img->m_size;
-            float image_scale = std::min(
-                canvas.window_size.x / canvas.size.x, canvas.window_size.y / canvas.size.y
-            );
-            canvas.view_center = canvas.window_size / 2;
-            canvas.relative_zoom_factor = canvas.zoom_factor = vars.canvas_zoom_factor =  1.f / image_scale;
-            canvas.navigate();
+                // the first opened image defines the canvas size and other variables
+                if (canvas.initialized == false)
+                {
+                    canvas.size = img_size;
+                    canvas.view_center = canvas.window_size / 2;
+                    float image_scale = std::max(
+                        canvas.size.x / canvas.window_size.x,
+                        canvas.size.y / canvas.window_size.y
+                    );
+                    canvas.relative_zoom_factor = canvas.zoom_factor = vars.canvas_zoom_factor = 2 * image_scale;
+                    canvas.navigate();
+                    canvas.initialized = true;
+                }
 
-            // add to canvas' layers
-            canvas.layers.emplace_back(
-                canvas.default_layer_name(), canvas.window_size / 2, img->m_size,
-                canvas.layers.size(), img, Layer::RASTER, 100.f, Layer::NORMAL
-            );
+                vec2 img_pos = (canvas.window_size - img_size) / 2;
 
+                // add to canvas' layers
+                canvas.layers.emplace_back(
+                    name,
+                    img_pos,
+                    img, Layer::RASTER, Layer::NORMAL
+                );
+            }
+            else
+                delete img;
             vars.open_image = false;
         }
 
@@ -225,37 +388,43 @@ int main()
             }
             else
             {
-                Raster* img = (Raster*)canvas.layers[canvas.layers.size() - 1].graphic;
-                filters::gray_scale(*img);
-                img->upload_to_texture(nullptr);
+                std::cout << "sike, you thought!\n";
             }
             vars.apply_gray_scale = false;
         }
 
-        // if asked to reset the canvas navigation
-        if (vars.navigate_canvas_reset)
-        {
-            vars.canvas_zoom_factor = canvas.zoom_factor = canvas.relative_zoom_factor;
-            canvas.view_center = canvas.window_size / 2;
-            canvas.navigate();
-            vars.navigate_canvas_reset = false;
-        }
-
         // update the view to "navigate the canvas"
-        if (vars.navigate_canvas_right_now)
+        // but prevent navigating if mouse not over the canvas window or if a modal window is there (see Action.cpp where this prevention occurs)        
+        // prevent navigation when canvas is not initialized as well
+        vars.canvas_focused = is_mouse_over_canvas_window &&
+            (!vars.show_open_img_dialog && !vars.show_saveas_img_dialog);
+        if (canvas.initialized)
         {
-            canvas.zoom_factor = vars.canvas_zoom_factor;
-            canvas.view_center += vars.pan_delta;
-            canvas.navigate();
-            vars.navigate_canvas_right_now = false;
+            if (vars.navigate_canvas_right_now)
+            {
+                canvas.zoom_factor = vars.canvas_zoom_factor;
+                canvas.view_center += vars.pan_delta;
+                vars.pan_delta = vec2(0, 0);
+                canvas.navigate();
+                vars.navigate_canvas_right_now = false;
+            }
+
+            // if asked to reset the canvas navigation
+            if (vars.navigate_canvas_reset)
+            {
+                vars.canvas_zoom_factor = canvas.zoom_factor = canvas.relative_zoom_factor;
+                canvas.view_center = canvas.window_size / 2;
+                canvas.navigate();
+                vars.navigate_canvas_reset = false;
+            }
+        }
+        else
+        {
+            vars.canvas_zoom_factor = 1;
+            vars.pan_delta *= canvas.initialized;
         }
 
-        // menu bar at the top
-        if (vars.show_menu_bar) gui::show_menu_bar(vars);
-        if (vars.show_open_img_dialog) { gui::show_open_dialog(vars); }
-        if (vars.show_saveas_img_dialog) { gui::show_saveas_dialog(vars); }
-
-#if DEBUG == 1 // this is for debugging only; change the 1 to 0 to simply ignore the code wrapped in #if and #endif
+#if DEBUG == 1 // this is for debugging only
         // display the current pressed keys as they are pressed or released
         ImGui::Begin("Debug");
         std::string keys_pressed = "Keys pressed: ";
@@ -266,12 +435,24 @@ int main()
         ImGui::Text(keys_pressed.c_str());
         // display window, canvas, view, etc's info
         ImGui::Text("Window size: (%i, %i)", window.getSize().x , window.getSize().y);
+        ImGui::Separator();
+        ImGui::Text("Canvas window pos: (%.1f, %.1f)", canvas.window_pos.x, canvas.window_pos.y);
         ImGui::Text("Canvas window size: (%.1f, %.1f)", canvas.window_size.x, canvas.window_size.y);
-        ImGui::Text("Canvas texture size: (%i, %i)", canvas.texture.getSize().x , canvas.texture.getSize().y);
+        ImGui::Text("Canvas texture size: (%i, %i)", canvas.window_texture.getSize().x , canvas.window_texture.getSize().y);
         ImGui::Text("Canvas size: (%.1f, %.1f)", canvas.size.x, canvas.size.y);
         ImGui::Text("Canvas zoom factor: %f", canvas.zoom_factor);
+        ImGui::Text("Canvas relative zoom factor: %f", canvas.relative_zoom_factor);
         ImGui::Text("Canvas view center: (%.1f, %.1f)", canvas.view_center.x, canvas.view_center.y);
-        ImGui::Text("Mouse position: (%.1f, %.1f)", mouse_pos.x, mouse_pos.y);
+        ImGui::Text("Pan delta: (%.1f, %.1f)", vars.pan_delta.x, vars.pan_delta.y);
+        ImGui::Text("Canvas focused: %i", vars.canvas_focused);
+        ImGui::Separator();
+        ImGui::Text("Mouse position: (%.1f, %.1f)", vars.mouse_pos.x, vars.mouse_pos.y);
+        vec2 mouse_w_pos = canvas.window_texture.mapPixelToCoords((vec2i)vars.mouse_pos);
+        ImGui::Text("Mouse world position: (%.1f, %.1f)", mouse_w_pos.x, mouse_w_pos.y);
+        mouse_w_pos = canvas.window_texture.mapPixelToCoords((vec2i)(vars.mouse_pos - canvas.window_pos));
+        ImGui::Text("Mouse canvas world position: (%.1f, %.1f)", mouse_w_pos.x, mouse_w_pos.y);
+        ImGui::Text("Mouse left held: %i", vars.mouse_l_held);
+        ImGui::Text("Mouse right held: %i", vars.mouse_r_held);
         ImGui::End();
 #endif
 

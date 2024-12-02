@@ -57,28 +57,34 @@ void do_action(const Action& action)
 {
     if (action.name == "mouse_move")
     {
-        if (vars.pan_start)
+        if (vars.mouse_r_held && vars.canvas_focused)
         {
-            vars.pan_delta = (action.pos - action.prev_pos) * (-0.6 * vars.canvas_zoom_factor);
+            const float speed_mult = 1.0f;
+            vars.pan_delta = (action.pos - action.prev_pos) * (-speed_mult * vars.canvas_zoom_factor);
             vars.navigate_canvas_right_now = true;
         }
     }
 
     if (action.name == "mouse_scroll")
     {
-        float change_factor = (action.ticks > 0 ? 0.9 : 1.1);
-        vars.canvas_zoom_factor *= change_factor;
-        vars.navigate_canvas_right_now = true;
+        if (vars.canvas_focused)
+        {
+            const float percent_change = 0.1;
+            float change_factor = (action.ticks > 0 ? 1 - percent_change : 1 + percent_change);
+            vars.canvas_zoom_factor *= change_factor;
+            vars.navigate_canvas_right_now = true;
+        }
     }
 
     if (action.type == Action::START)
     {
         if (action.name == "left_click")
         {
+            vars.mouse_l_held = true;
         }
         else if (action.name == "right_click")
         {
-            vars.pan_start = true;
+            vars.mouse_r_held = true;
         }
         else if (action.name == "toggle_menubar")
         {
@@ -111,10 +117,11 @@ void do_action(const Action& action)
     {
         if (action.name == "left_click")
         {
+            vars.mouse_l_held = false;
         }
         else if (action.name == "right_click")
         {
-            vars.pan_start = false;
+            vars.mouse_r_held = false;
         }
     }
 }

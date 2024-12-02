@@ -5,10 +5,11 @@
 // this will expand more
 namespace util {
 
+    // this is meant for primitive types
     template <typename T>
-    void clamp(T& value, T min, T max)
+    T clamp(T value, T min, T max)
     {
-        value = std::min(std::max(value, min), max);
+        return std::min(std::max(value, min), max);
     }
 
 }

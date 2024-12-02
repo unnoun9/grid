@@ -1,97 +1,100 @@
 #pragma once
 #include <iostream>
 #include <list>
-#include <functional> // For std::hash
-#include <utility>    // For std::pair
+#include <functional> // for std::hash
+#include <utility>    // for std::pair
+
+namespace ds {
 
 template <typename K, typename V>
-class hash_map {
+struct map
+{
+    // inserts or updates an item
+    void insert(const K& key, const V& value);
+
+    // removes an item
+    void remove(const K& key);
+
+    // search for an item; if the item is found its value is set to the `value` parameter and true is returned; otherwise nothing is set and false is returned
+    bool search(const K& key, V& value) const;
+
+    // check if the hash map is empty
+    bool empty() const;
+
 private:
-    static const int size = 20; // Fixed bucket count
-    std::list<std::pair<K, V>> table[size]; // Array of buckets (chaining with std::list)
+    static const int size = 20; // fixed bucket count
+    std::list<std::pair<K, V>> table[size]; // array of buckets (chaining with std::list)
 
-    int hashFunction(const K& key) const {
-        return std::hash<K>{}(key) % size; // General hash function using std::hash
+    int hash(const K& key) const
+    {
+        return std::hash<K>{}(key) % size; // general hash function using std::hash
     }
-
-public:
-    bool isEmpty() const;
-    void insertItem(const K& key, const V& value);
-    void removeItem(const K& key);
-    V searchTable(const K& key) const;
-    void printTable() const;
 };
 
-// Check if the hash map is empty
+// ..................................................................................................
 template <typename K, typename V>
-bool hash_map<K, V>::isEmpty() const {
-    for (int i = 0; i < size; i++) {
-        if (!table[i].empty()) return false; // Found a non-empty bucket
+bool map<K, V>::empty() const
+{
+    for (int i = 0; i < size; i++)
+    {
+        if (!table[i].empty()) return false; // found a non-empty bucket
     }
     return true;
 }
 
-// Insert or update an item
+// ..................................................................................................
 template <typename K, typename V>
-void hash_map<K, V>::insertItem(const K& key, const V& value) {
-    int hashValue = hashFunction(key);
-    auto& bucket = table[hashValue];
+void map<K, V>::insert(const K& key, const V& value)
+{
+    int hash_value = hash(key);
+    auto& bucket = table[hash_value];
 
-    for (auto& entry : bucket) {
-        if (entry.first == key) {
-            entry.second = value; // Update value
-            std::cout << "Key exists. Value is updated.\n";
+    for (auto& entry : bucket)
+    {
+        if (entry.first == key)
+        {
+            entry.second = value; // update value
             return;
         }
     }
 
-    bucket.emplace_back(key, value); // Add new key-value pair
-    std::cout << "Key inserted.\n";
+    bucket.emplace_back(key, value); // add new key-value pair
 }
 
-// Remove an item
+// ..................................................................................................
 template <typename K, typename V>
-void hash_map<K, V>::removeItem(const K& key) {
-    int hashValue = hashFunction(key);
-    auto& bucket = table[hashValue];
+void map<K, V>::remove(const K& key)
+{
+    int hash_value = hash(key);
+    auto& bucket = table[hash_value];
 
-    for (auto itr = bucket.begin(); itr != bucket.end(); ++itr) {
-        if (itr->first == key) {
-            bucket.erase(itr); // Erase the key-value pair
-            std::cout << "Item removed.\n";
+    for (auto itr = bucket.begin(); itr != bucket.end(); ++itr)
+    {
+        if (itr->first == key)
+        {
+            bucket.erase(itr); // erase the key-value pair
             return;
         }
     }
-
-    std::cout << "Key not found.\n";
 }
 
-// Search for an item
+// ..................................................................................................
 template <typename K, typename V>
-V hash_map<K, V>::searchTable(const K& key) const {
-    int hashValue = hashFunction(key);
-    const auto& bucket = table[hashValue];
+bool map<K, V>::search(const K& key, V& value) const
+{
+    int hash_value = hash(key);
+    const auto& bucket = table[hash_value];
 
-    for (const auto& entry : bucket) {
-        if (entry.first == key) {
-            return entry.second; // Return the value
+    for (const auto& entry : bucket)
+    {
+        if (entry.first == key)
+        {
+            value = entry.second; // set the value
+            return true; // key found
         }
     }
 
-    throw std::runtime_error("Key not found."); // Key does not exist
+    return false; // key not found
 }
 
-// Print the hash map
-template <typename K, typename V>
-void hash_map<K, V>::printTable() const {
-    for (int i = 0; i < size; i++) {
-        if (table[i].empty()) continue;
-
-        std::cout << "Bucket " << i << ": ";
-        for (const auto& entry : table[i]) {
-            std::cout << "[Key: " << entry.first << ", Value: " << entry.second << "] ";
-        }
-        std::cout << "\n";
-    }
-}
-
+} // end namespace ds

@@ -6,17 +6,27 @@
 struct Canvas
 {
     std::vector<Layer> layers;          // for now this, but later maybe implement a better place to hold layers whose m_graphic can be other things too, not only raster
-    sf::RenderTexture texture;
+    Layer* current_select_layer = NULL; // self-explanatory; its value is set through the imgui layer panel
+    sf::RenderWindow* window;           // pointer to the SFML window to access its variables
+    sf::RenderTexture window_texture;   // the place where everything will ultimately be drawn; replaces RenderWindow
+    sf::RenderTexture texture;          // a texture that simulates the canvas; this is the actual place where stuff if present
+    
     vec2 size;                          // the size of the canvas which is the size of the newly created or the opened image; this size will change by the cropping tool
+    vec2 start_pos;                     // the top-left position from where the actual canvas starts
+    vec2 window_pos;
     vec2 window_size;                   // canvas window size
     vec2 view_center;                   // represents where we are in the canvas so that we can tell that to sf::View
     float zoom_factor = 1.f;            // represents how zoomed in we are so that we can tell that to sf::View
     float relative_zoom_factor = 1.f;   // represents the zoom factor value that represents no zoom for the current canvas size
                                         // relative zoom factor may later be used to display the user how much % are they zoomed
+    bool initialized = false;           // represents whether or not the canvas was loaded with an image for the first time or if a new blank image was created
+
+    // checker pattern-related variables
     sf::Shader checker_shader;
     bool checker_shader_loaded = true;
+    sf::RectangleShape checker_rect;
 
-    Canvas(vec2 window_size);
+    Canvas(vec2 window_size, sf::RenderWindow*);
 
     // draw checker pattern then all the layers correctly
     void draw();

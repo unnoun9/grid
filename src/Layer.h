@@ -1,15 +1,27 @@
 #pragma once
 #include <string>
-#include "vec2t.h"
-#include "Image.h"
+#include "Raster.h"
+
+// these two arrays are just so to convert the Layer enums to string for displaying in gui to the user
+static const char* layer_types_str[] = {
+    "Empty", "Raster", "Adjustment", "Text", "Shape", "Smart", "Fill"
+};
+static const char* layer_blend_str[] = {
+    "Normal", "Dissolve",
+    "Darken", "Multiply", "Color Burn", "Linear Burn", "Darker Color",
+    "Lighten", "Screen", "Color Dodge", "Linear Dodge", "Lighter Dodge",
+    "Overlay", "Soft Light", "Hard Light", "Vivide Light", "Linear Light", "Pin Light", "Hard Mix",
+    "Difference", "Exclusion", "Subtract", "Divide",
+    "Hue", "Saturation", "Color", "Luminosity"
+};
 
 // a layer that contains various information
 // graphic pointer should point to an image (pixel array) or some kind of graphic (like text, brush stroke, vector graphic, shapes, etc)
 struct Layer
 {
-    enum Layer_type
+    enum Type
     {
-        EMPTY = -1, RASTER, ADJUSTMENT, TEXT, SHAPE, SMART, FILL
+        EMPTY = 0, RASTER, ADJUSTMENT, TEXT, SHAPE, SMART, FILL
     };
 
     enum Blend_mode
@@ -23,14 +35,19 @@ struct Layer
     };
 
     std::string name;       // layer's name; behaves as some ID of it
-    Layer_type type;        // layer's type on the basis of which it's behaviour is determined
-    vec2 pos;               // layer's position in the canvas
-    vec2 size;              // layer's size
+    Type type;        // layer's type on the basis of which it's behaviour is determined
+    vec2 pos;               // layer's position in the canvas (maybe not needed since the graphic may contain that (as the RASTER graphic does)?)
     float opacity = 100.f;  // layer's opacity or state of transparency
-    short index = 0;        // layer's z-index; specifies where in the "z-axis" the layer is in the canvas; this may be used to sort the layers in the canvas later
-    Blend_mode blend;       // maybe use an enum for this?
+    bool is_visible = true; // self-explanatory
+    Blend_mode blend;       // specifies how the current layer's pixels and graphics behave w.r.t layers below it
     void* graphic;          // a graphic which could be a raster image, text, shape, etc
+    
 
-    Layer(const std::string& name, const vec2& pos, const vec2& size, short index, void* graphic, Layer_type type, float opacity, Blend_mode blend)
-        : name(name), type(type), pos(pos), size(size), opacity(opacity), index(index), blend(blend), graphic(graphic) {}
+    Layer(const std::string& name, const vec2& pos, void* graphic, Type type, Blend_mode blend);
+    Layer(Layer&& other) noexcept;
+    Layer& operator=(Layer&& other) noexcept;
+    ~Layer();
+
+    // looks into the map and returns a string representation of the type or the blend mode of the current layer, depending on convert_blend
+    const char* type_or_blend_to_cstr(bool convert_type=true);
 };
