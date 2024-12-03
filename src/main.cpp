@@ -159,13 +159,11 @@ i32 main()
                         // handle other layer types
                         else;
 
-                        vec2 mouse_p = canvas.window_texture.mapPixelToCoords((vec2i)(vars.mouse_pos - tools.canvas->window_pos));
                         sf::FloatRect bounds(tools.layer->pos, layer_size);
-
-                        if (bounds.contains(mouse_p))
+                        if (bounds.contains(canvas.mouse_p))
                         {
                             tools.is_dragging = true;
-                            tools.layer_offset = mouse_p - tools.layer->pos;
+                            tools.layer_offset = canvas.mouse_p - tools.layer->pos;
                         }
                     }
 
@@ -220,18 +218,31 @@ i32 main()
         canvas.draw();
 
         // the canvas window
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
         ImGui::Begin("Canvas", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-        // resizing and is mouse over the canvas logic
+        // detect whether the canvas is resized
         ImVec2 current_canv_win_size = ImGui::GetWindowSize();
         if (current_canv_win_size.x != canvas.window_size.x || current_canv_win_size.y != canvas.window_size.y)
             canvas.window_size = vec2(ImGui::GetWindowSize().x, ImGui::GetWindowSize().y);
-        ImVec2 canv_window_pos = ImGui::GetWindowPos();
-        bool is_mouse_over_canvas_window = ImGui::IsMouseHoveringRect(canv_window_pos, ImVec2(canv_window_pos.x + current_canv_win_size.x, canv_window_pos.y + current_canv_win_size.y));
-        canvas.window_pos.x = canv_window_pos.x + 8 * canvas.zoom_factor;
-        canvas.window_pos.y = canv_window_pos.y + 26 * canvas.zoom_factor;
         // draw the canvas' RenderTexture
-        ImGui::Image(canvas.window_texture.getTexture().getNativeHandle(), ImVec2(canvas.window_texture.getSize().x, canvas.window_texture.getSize().y), ImVec2(0, 1), ImVec2(1, 0));
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.f, 0.f));
+        ImGui::ImageButton("Canvas", canvas.window_texture.getTexture().getNativeHandle(), ImVec2(canvas.window_texture.getSize().x, canvas.window_texture.getSize().y), ImVec2(0, 1), ImVec2(1, 0));
+        ImGui::PopStyleVar();
+        // ImGui::Image(canvas.window_texture.getTexture().getNativeHandle(), ImVec2(canvas.window_texture.getSize().x, canvas.window_texture.getSize().y), ImVec2(0, 1), ImVec2(1, 0));
+        // compute the relative coordinates for mouse position
+        ImVec2 abs_mouse_p = ImGui::GetMousePos();
+        ImVec2 abs_screen_p = ImGui::GetItemRectMin();
+        canvas.mouse_p = vec2(abs_mouse_p.x - abs_screen_p.x, abs_mouse_p.y - abs_screen_p.y);
+        canvas.mouse_p = canvas.window_texture.mapPixelToCoords((vec2i)(canvas.mouse_p));
+        vars.canvas_focused = ImGui::IsItemHovered();
         ImGui::End();
+        ImGui::PopStyleVar();
+
+        // this is just to debug mouse position relative to the canvas
+        sf::CircleShape circ(8 * canvas.zoom_factor, 128);
+        circ.setFillColor(sf::Color::Red);
+        circ.setPosition(canvas.mouse_p - vec2(circ.getRadius(), circ.getRadius()));
+        canvas.window_texture.draw(circ);
 
         // the layers panel
         ImGui::Begin("Layers");
@@ -396,9 +407,8 @@ i32 main()
         // update the view to "navigate the canvas"
         // but prevent navigating if mouse not over the canvas window or if a modal window is there (see Action.cpp where this prevention occurs)        
         // prevent navigation when canvas is not initialized as well
-        vars.canvas_focused = is_mouse_over_canvas_window &&
-            (!vars.show_open_img_dialog && !vars.show_saveas_img_dialog);
-        if (canvas.initialized)
+        vars.canvas_focused = vars.canvas_focused && (!vars.show_open_img_dialog && !vars.show_saveas_img_dialog);
+        if (canvas.initialized || true)
         {
             if (vars.navigate_canvas_right_now)
             {
@@ -436,7 +446,6 @@ i32 main()
         // display window, canvas, view, etc's info
         ImGui::Text("Window size: (%i, %i)", window.getSize().x , window.getSize().y);
         ImGui::Separator();
-        ImGui::Text("Canvas window pos: (%.1f, %.1f)", canvas.window_pos.x, canvas.window_pos.y);
         ImGui::Text("Canvas window size: (%.1f, %.1f)", canvas.window_size.x, canvas.window_size.y);
         ImGui::Text("Canvas texture size: (%i, %i)", canvas.window_texture.getSize().x , canvas.window_texture.getSize().y);
         ImGui::Text("Canvas size: (%.1f, %.1f)", canvas.size.x, canvas.size.y);
@@ -447,10 +456,7 @@ i32 main()
         ImGui::Text("Canvas focused: %i", vars.canvas_focused);
         ImGui::Separator();
         ImGui::Text("Mouse position: (%.1f, %.1f)", vars.mouse_pos.x, vars.mouse_pos.y);
-        vec2 mouse_w_pos = canvas.window_texture.mapPixelToCoords((vec2i)vars.mouse_pos);
-        ImGui::Text("Mouse world position: (%.1f, %.1f)", mouse_w_pos.x, mouse_w_pos.y);
-        mouse_w_pos = canvas.window_texture.mapPixelToCoords((vec2i)(vars.mouse_pos - canvas.window_pos));
-        ImGui::Text("Mouse canvas world position: (%.1f, %.1f)", mouse_w_pos.x, mouse_w_pos.y);
+        ImGui::Text("Mouse canvas world position: (%.1f, %.1f)", canvas.mouse_p.x, canvas.mouse_p.y);
         ImGui::Text("Mouse left held: %i", vars.mouse_l_held);
         ImGui::Text("Mouse right held: %i", vars.mouse_r_held);
         ImGui::End();

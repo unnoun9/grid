@@ -141,7 +141,7 @@ void Canvas::draw()
     canvas_draw_texture.display();
 
     // draw the intermediate texture onto the main window_texture, centering it
-    window_texture.clear(sf::Color::White);
+    window_texture.clear(sf::Color(15, 15, 15));
     sf::Sprite canvas_sprite(canvas_draw_texture.getTexture());
     canvas_sprite.setPosition(start_pos);
     window_texture.draw(canvas_sprite);

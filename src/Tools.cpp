@@ -24,7 +24,6 @@ void move(Tools& t)
     if (!t.layer)
         return;
 
-    vec2 mouse_p = t.canvas->window_texture.mapPixelToCoords((vec2i)(vars.mouse_pos - t.canvas->window_pos));
     vec2 layer_size;
     if (t.layer->type == Layer::RASTER)
         layer_size = ((Raster*)t.layer->graphic)->data.getSize();
@@ -33,16 +32,16 @@ void move(Tools& t)
     
     if (t.is_dragging)
     {
-        t.layer->pos = mouse_p - t.layer_offset;
+        t.layer->pos = t.canvas->mouse_p - t.layer_offset;
     }
 
     sf::FloatRect bounds(t.layer->pos, layer_size);
-    if (bounds.contains(mouse_p))
+    if (bounds.contains(t.canvas->mouse_p))
     {
         sf::RectangleShape rect(layer_size);
         rect.setPosition(t.layer->pos);
         rect.setOutlineColor(sf::Color(0, 127, 255));
-        rect.setOutlineThickness(4); // maybe multiply by canvas->zoom_factor?
+        rect.setOutlineThickness(3 * t.canvas->zoom_factor);
         rect.setFillColor(sf::Color::Transparent);
         t.canvas->window_texture.draw(rect);
     }

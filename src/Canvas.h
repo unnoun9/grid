@@ -13,9 +13,9 @@ struct Canvas
     
     vec2 size;                          // the size of the canvas which is the size of the newly created or the opened image; this size will change by the cropping tool
     vec2 start_pos;                     // the top-left position from where the actual canvas starts
-    vec2 window_pos;
     vec2 window_size;                   // canvas window size
     vec2 view_center;                   // represents where we are in the canvas so that we can tell that to sf::View
+    vec2 mouse_p;
     float zoom_factor = 1.f;            // represents how zoomed in we are so that we can tell that to sf::View
     float relative_zoom_factor = 1.f;   // represents the zoom factor value that represents no zoom for the current canvas size
                                         // relative zoom factor may later be used to display the user how much % are they zoomed
