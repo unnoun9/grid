@@ -1,19 +1,23 @@
 #include "Layer.h"
+#include <cstring>
 
-Layer::Layer(const std::string& name, const vec2& pos, void* graphic, Type type, Blend_mode blend)
-    : name(name), type(type), pos(pos), blend(blend), graphic(graphic)
+Layer::Layer(const char* name, const vec2& pos, void* graphic, Type type, Blend_mode blend)
+    : type(type), pos(pos), blend(blend), graphic(graphic)
 {
+    strncpy(this->name, name, LAYER_NAME_MAX_LENGTH - 1);
+    this->name[LAYER_NAME_MAX_LENGTH - 1] = '\0';
 }
 
 Layer::Layer(Layer && other) noexcept
-    : name(std::move(other.name))
-    , type(other.type)
+    : type(other.type)
     , pos(other.pos)
     , opacity(other.opacity)
     , is_visible(other.is_visible)
     , blend(other.blend)
     , graphic(other.graphic)
 {
+    strncpy(name, other.name, LAYER_NAME_MAX_LENGTH - 1);
+    name[LAYER_NAME_MAX_LENGTH - 1] = '\0';
     other.graphic = nullptr;
 }
 
@@ -24,7 +28,7 @@ Layer& Layer::operator=(Layer && other) noexcept
         if (graphic)
             delete (Raster*)graphic;
 
-        name = std::move(other.name);
+        strncpy(name, other.name, LAYER_NAME_MAX_LENGTH - 1);
         type = other.type;
         pos = other.pos;
         opacity = other.opacity;
@@ -46,6 +50,7 @@ Layer::~Layer()
 
 const char* Layer::type_or_blend_to_cstr(bool convert_type)
 {
+    // return "unspecified";
     if (convert_type)
         return layer_types_str[type];
     else

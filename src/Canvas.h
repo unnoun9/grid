@@ -1,38 +1,45 @@
 #pragma once
 #include <SFML/Graphics.hpp>
+#include "imgui.h"
 #include "Layer.h"
+#include "Tools.h"
+
+struct Tools;
 
 // represents the canvas
 struct Canvas
 {
-    std::vector<Layer> layers;          // for now this, but later maybe implement a better place to hold layers whose m_graphic can be other things too, not only raster
-    Layer* current_select_layer = NULL; // self-explanatory; its value is set through the imgui layer panel
-    sf::RenderWindow* window;           // pointer to the SFML window to access its variables
-    sf::RenderTexture window_texture;   // the place where everything will ultimately be drawn; replaces RenderWindow
-    sf::RenderTexture texture;          // a texture that simulates the canvas; this is the actual place where stuff if present
-    
-    vec2 size;                          // the size of the canvas which is the size of the newly created or the opened image; this size will change by the cropping tool
-    vec2 start_pos;                     // the top-left position from where the actual canvas starts
-    vec2 window_size;                   // canvas window size
-    vec2 view_center;                   // represents where we are in the canvas so that we can tell that to sf::View
-    vec2 mouse_p;
-    float zoom_factor = 1.f;            // represents how zoomed in we are so that we can tell that to sf::View
-    float relative_zoom_factor = 1.f;   // represents the zoom factor value that represents no zoom for the current canvas size
-                                        // relative zoom factor may later be used to display the user how much % are they zoomed
-    bool initialized = false;           // represents whether or not the canvas was loaded with an image for the first time or if a new blank image was created
+    std::vector<Layer> layers;                      // for now this, but later maybe implement a better place to hold layers whose m_graphic can be other things too, not only raster
+    Layer* current_select_layer = NULL;             // self-explanatory; its value is set through the imgui layer panel
+    sf::RenderTexture window_texture;               // the place where everything will ultimately be drawn; replaces RenderWindow
+    sf::RenderTexture texture;                      // a texture that simulates the canvas; this is the actual place where stuff if present
+    bool initialized = false;                       // represents whether or not the canvas was loaded with an image for the first time or if a new blank image was created
 
-    // checker pattern-related variables
-    sf::Shader checker_shader;
-    bool checker_shader_loaded = true;
-    sf::RectangleShape checker_rect;
+    vec2 size;                                      // the size of the canvas which is the size of the newly created or the opened image; this size will change by the cropping tool
+    vec2 start_pos;                                 // the top-left position from where the actual canvas starts
+    vec2 window_size;                               // canvas window size
+    vec2 view_center;                               // represents where we are in the canvas so that we can tell that to sf::View
+    vec2 mouse_p;                                   // the world position inside the canvas window_texture
+    float zoom_factor = 1.f;                        // represents how zoomed in we are so that we can tell that to sf::View
+    float relative_zoom_factor = 1.f;               // represents the zoom factor value that represents no zoom for the current canvas size
+                                                    // relative zoom factor may later be used to display the user how much % are they zoomed
+    ImVec4 primary_color = ImVec4(1, 1, 1, 1);      // the "foreground" color
+    ImVec4 secondary_color = ImVec4(0, 0, 0, 0);    // the "background" color
+    i32 current_color = 0;                          // 0 means foreground color is selected; 1 means background color is selected
 
-    Canvas(vec2 window_size, sf::RenderWindow*);
+    sf::Shader checker_shader;                      // contains the checker.frag shader
+    bool checker_shader_loaded = true;              // if this is false, then manual checker drawing will be used instead of shaders
+    sf::RectangleShape checker_rect;                // this rect is where the checker shader does its thing
+
+    Tools* tools;                                   // to access tool's variables
+
+    Canvas(vec2 window_size);
 
     // draw checker pattern then all the layers correctly
     void draw();
     
     // just simply returns "layer X" where X is number of layers for the sake of convenience 
-    std::string default_layer_name();
+    const char* default_layer_name();
 
     // uses zoom_level and center to zoom and pan across (effectively navigating the canvas)
     void navigate();

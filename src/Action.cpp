@@ -98,7 +98,7 @@ void do_action(const Action& action)
         {
             vars.show_open_img_dialog = true;
         }
-        else if (action.name == "save")
+        else if (action.name == "saveas")
         {
             vars.show_saveas_img_dialog = true;
         }

@@ -18,7 +18,7 @@ void gui::show_menu_bar(Variables& vars)
             {
                 vars.show_open_img_dialog = true;
             }
-            if (ImGui::MenuItem("Save", "Ctrl+S"));
+            // if (ImGui::MenuItem("Save", "Ctrl+S")); // add this when a custom save file format (e.g .ps for Photoshop) has been implemented
             if (ImGui::MenuItem("Save As..", "Ctrl+ShiftS"))
             {
                 vars.show_saveas_img_dialog = true;

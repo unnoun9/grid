@@ -15,6 +15,8 @@ static const char* layer_blend_str[] = {
     "Hue", "Saturation", "Color", "Luminosity"
 };
 
+const i32 LAYER_NAME_MAX_LENGTH = 64;
+
 // a layer that contains various information
 // graphic pointer should point to an image (pixel array) or some kind of graphic (like text, brush stroke, vector graphic, shapes, etc)
 struct Layer
@@ -34,16 +36,16 @@ struct Layer
         HUE, SATURATION, COLOR, LUMINOSITY
     };
 
-    std::string name;       // layer's name; behaves as some ID of it
-    Type type;        // layer's type on the basis of which it's behaviour is determined
-    vec2 pos;               // layer's position in the canvas (maybe not needed since the graphic may contain that (as the RASTER graphic does)?)
-    float opacity = 100.f;  // layer's opacity or state of transparency
-    bool is_visible = true; // self-explanatory
-    Blend_mode blend;       // specifies how the current layer's pixels and graphics behave w.r.t layers below it
-    void* graphic;          // a graphic which could be a raster image, text, shape, etc
+    char name[LAYER_NAME_MAX_LENGTH] = "unspecified";     // layer's name; behaves as some ID of it
+    Type type = EMPTY;                  // layer's type on the basis of which it's behaviour is determined
+    vec2 pos;                           // layer's position in the canvas (maybe not needed since the graphic may contain that (as the RASTER graphic does)?)
+    float opacity = 100.f;              // layer's opacity or state of transparency
+    bool is_visible = true;             // self-explanatory
+    Blend_mode blend = NORMAL;          // specifies how the current layer's pixels and graphics behave w.r.t layers below it
+    void* graphic = nullptr;            // a graphic which could be a raster image, text, shape, etc
     
 
-    Layer(const std::string& name, const vec2& pos, void* graphic, Type type, Blend_mode blend);
+    Layer(const char* name, const vec2& pos, void* graphic, Type type, Blend_mode blend);
     Layer(Layer&& other) noexcept;
     Layer& operator=(Layer&& other) noexcept;
     ~Layer();
