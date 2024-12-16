@@ -4,7 +4,7 @@ uniform float alpha; // alpha value for blending
 
 void main()
 {
-    vec4 color1 = texture2D(texture1, gl_TexCoord[0].xy);
+    vec4 color1 = texture2D(texture1, vec2(gl_TexCoord[0].x, gl_TexCoord[0].y));
     vec4 color2 = texture2D(texture2, gl_TexCoord[0].xy);
     gl_FragColor = mix(color1, color2, alpha);
 }

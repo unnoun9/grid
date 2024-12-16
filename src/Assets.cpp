@@ -46,6 +46,20 @@ void Assets::loadfromfile(const std::string& path)
                 std::cout << "Loaded Font: " << path << ", " << name << std::endl;
             }
         }
+        else if (type == "FragShader")
+        {
+            std::string name, path;
+            file >> name >> path;
+            if (!shader_map[name].loadFromFile(path, sf::Shader::Fragment))
+            {
+                std::cerr << "Could not load shader file: " << path << std::endl;
+                shader_map.erase(name);
+            }
+            else
+            {
+                std::cout << "Loaded Shader: " << path << ", " << name << std::endl;
+            }
+        }
         else
         {
             std::cerr << "Unknown Asset Type: " << type << std::endl;
@@ -69,4 +83,13 @@ const sf::Font& Assets::get_font(const std::string& name) const
         std::cerr << "Failed at `get_font`: " << name << std::endl;
     assert(assertion);
     return font_map.at(name);
+}
+
+const sf::Shader& Assets::get_shader(const std::string& name) const
+{
+    bool assertion = shader_map.find(name) != shader_map.end();
+    if (!assertion)
+        std::cerr << "Failed at `get_shader`: " << name << std::endl;
+    assert(assertion);
+    return shader_map.at(name);
 }

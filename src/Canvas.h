@@ -2,6 +2,7 @@
 #include <SFML/Graphics.hpp>
 #include "imgui.h"
 #include "Layer.h"
+#include "Assets.h"
 #include "Tools.h"
 
 struct Tools;
@@ -26,12 +27,10 @@ struct Canvas
     ImVec4 primary_color = ImVec4(1, 1, 1, 1);      // the "foreground" color
     ImVec4 secondary_color = ImVec4(0, 0, 0, 0);    // the "background" color
     i32 current_color = 0;                          // 0 means foreground color is selected; 1 means background color is selected
-
-    sf::Shader checker_shader;                      // contains the checker.frag shader
-    bool checker_shader_loaded = true;              // if this is false, then manual checker drawing will be used instead of shaders
     sf::RectangleShape checker_rect;                // this rect is where the checker shader does its thing
-
+    Assets* assets;                                 // to access assets' variables
     Tools* tools;                                   // to access tool's variables
+    sf::RenderTexture prev_layer_Tex;
 
     Canvas(vec2 window_size);
 

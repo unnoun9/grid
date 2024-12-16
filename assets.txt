@@ -1,7 +1,43 @@
-Texture     1NoTool          assets/icons/tool-no.png
-Texture     2MoveTool        assets/icons/tool-move.png
-Texture     3BrushTool       assets/icons/tool-brush.png
-Texture     4EraserTool      assets/icons/tool-eraser.png
-Texture     5FillTool        assets/icons/tool-fill.png
+Texture     1NoTool         assets/icons/tool-no.png
+Texture     2MoveTool       assets/icons/tool-move.png
+Texture     3BrushTool      assets/icons/tool-brush.png
+Texture     4EraserTool     assets/icons/tool-eraser.png
+Texture     5FillTool       assets/icons/tool-fill.png
 
 Font        CaviarDreams    assets/fonts/caviar-dreams.ttf
+
+FragShader  Checker         shaders/checker.frag
+
+FragShader  LighterDodge    shaders/blend-modes/lighter_dodge.frag
+FragShader  LinearBurn      shaders/blend-modes/linear_burn.frag
+FragShader  Lighten         shaders/blend-modes/lighten.frag
+FragShader  LinearDodge     shaders/blend-modes/linear_dodge.frag
+FragShader  LinearLight     shaders/blend-modes/linear_light.frag
+FragShader  Luminosity      shaders/blend-modes/luminosity.frag
+FragShader  Hue             shaders/blend-modes/hue.frag
+FragShader  HardMix         shaders/blend-modes/hard_mix.frag
+FragShader  Multiply        shaders/blend-modes/multiply.frag
+FragShader  Normal          shaders/blend-modes/normal.frag
+FragShader  HardLight       shaders/blend-modes/hard_light.frag
+FragShader  Exclusion       shaders/blend-modes/exclusion.frag
+FragShader  Divide          shaders/blend-modes/divide.frag
+FragShader  Overlay         shaders/blend-modes/overlay.frag
+FragShader  PinLight        shaders/blend-modes/pin_light.frag
+FragShader  Saturation      shaders/blend-modes/saturation.frag
+FragShader  Dissolve        shaders/blend-modes/dissolve.frag
+FragShader  Difference      shaders/blend-modes/difference.frag
+FragShader  DarkerColor     shaders/blend-modes/darker_color.frag
+FragShader  Darken          shaders/blend-modes/darken.frag
+FragShader  Screen          shaders/blend-modes/screen.frag
+FragShader  SoftLight       shaders/blend-modes/soft_light.frag
+FragShader  Color           shaders/blend-modes/color.frag
+FragShader  Subtract        shaders/blend-modes/subtract.frag
+FragShader  ColorDodge      shaders/blend-modes/color_dodge.frag
+FragShader  VividLight      shaders/blend-modes/vivid_light.frag
+FragShader  ColorBurn       shaders/blend-modes/color_burn.frag
+
+FragShader  GrayScale       shaders/filters/grayscale.frag
+FragShader  Contrast        shaders/filters/grayscale.frag
+FragShader  Invert          shaders/filters/grayscale.frag
+FragShader  Brightness      shaders/filters/grayscale.frag
+FragShader  Sepia           shaders/filters/grayscale.frag

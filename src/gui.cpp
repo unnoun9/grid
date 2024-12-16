@@ -13,14 +13,20 @@ void gui::show_menu_bar(Variables& vars)
             if (ImGui::MenuItem("New", "Ctrl+N"))
             {
                 vars.show_new_img_dialog = true;
+                vars.show_open_img_dialog = false;
+                vars.show_saveas_img_dialog = false;
             }
             if (ImGui::MenuItem("Open", "Ctrl+O"))
             {
+                vars.show_new_img_dialog = false;
                 vars.show_open_img_dialog = true;
+                vars.show_saveas_img_dialog = false;
             }
             // if (ImGui::MenuItem("Save", "Ctrl+S")); // add this when a custom save file format (e.g .ps for Photoshop) has been implemented
-            if (ImGui::MenuItem("Save As..", "Ctrl+ShiftS"))
+            if (ImGui::MenuItem("Save As..", "Ctrl+Shift+S"))
             {
+                vars.show_new_img_dialog = false;
+                vars.show_open_img_dialog = false;
                 vars.show_saveas_img_dialog = true;
             }
             ImGui::EndMenu();

@@ -8,7 +8,7 @@
 #include "Action.h"
 #include "gui.h"
 #include "Variables.h"
-#include "util.hpp"
+#include "util.h"
 #include "Canvas.h"
 #include "Assets.h"
 #include "Tools.h"
@@ -45,7 +45,7 @@ void quit(bool& running, sf::RenderWindow& window)
 i32 main()
 {
     //................................................. INITIALIZATION .................................................
-    sf::RenderWindow window(sf::VideoMode(1800, 1000), "Grid", sf::Style::Default);
+    sf::RenderWindow window(sf::VideoMode(1600, 900), "Grid", sf::Style::Default);
     window.setKeyRepeatEnabled(false);
     sf::Clock delta_clock;
     bool running = true;
@@ -60,24 +60,9 @@ i32 main()
     {
         // handle this more gracefully
         std::cerr << "Your machine does not support shaders. Without shaders, `grid` may not work properly or efficiently.\n";
-        std::cerr << "Perhaps your GPU drivers needs to be updated?\n";
+        std::cerr << "Perhaps your GPU drivers need to be updated?\n";
         shaders_available = false;
     }
-
-    // the one and the only, canvas!
-    Canvas canvas(vec2(window.getSize().x * 0.7, window.getSize().y * 0.85));
-    i32 current_blend_mode_selected = 0;
-
-    // da tools
-    Tools tools(&canvas);
-    const char* tools_tooltips[Tools::NUM_TOOLS] = {    // used by imgui tooltips
-        "No tool. Literally no tool is selected at all..",
-        "Move tool. Moves layers using the mouse input.",
-        "Brush tool. The typical paint brush tool that can paint over layers, given its settings.",
-        "Eraser tool. Erases contents of a layer.",
-        "Fill tool. Flood fills a color onto a valid region of a layer."
-    };
-    canvas.tools = &tools;
 
     // load the assets and register keybinds or shortcuts
     Assets assets;
@@ -89,6 +74,21 @@ i32 main()
     register_action({sf::Keyboard::LControl, sf::Keyboard::Z}, "undo");
     register_action({sf::Keyboard::LControl, sf::Keyboard::Y}, "redo");
     register_action({sf::Keyboard::LControl, sf::Keyboard::LShift, sf::Keyboard::R}, "reset_canvas_navigation");
+
+    // the one and the only, canvas!
+    Canvas canvas(vec2(window.getSize().x * 0.7, window.getSize().y * 0.85));
+
+    // da tools
+    Tools tools(&canvas);
+    const char* tools_tooltips[Tools::NUM_TOOLS] = {    // used by imgui tooltips
+        "No tool. Literally no tool is selected at all..",
+        "Move tool. Moves layers using the mouse input.",
+        "Brush tool. The typical paint brush tool that can paint over layers, given its settings.",
+        "Eraser tool. Erases contents of a layer.",
+        "Fill tool. Flood fills a color onto a valid region of a layer."
+    };
+    canvas.assets = &assets;
+    canvas.tools = &tools;
 
     //................................................. MAIN LOOP .................................................
     while (running && window.isOpen())
@@ -255,8 +255,7 @@ i32 main()
         // ability to customize the currently selected layer
         if (canvas.current_select_layer)
         {
-            if (ImGui::Combo("Blend Mode", &current_blend_mode_selected, layer_blend_str, IM_ARRAYSIZE(layer_blend_str)))
-                canvas.current_select_layer->blend = (Layer::Blend_mode)current_blend_mode_selected;
+            ImGui::Combo("Blend Mode", (i32*)&canvas.current_select_layer->blend, layer_blend_str, IM_ARRAYSIZE(layer_blend_str));
             ImGui::SliderFloat("Opacity", &canvas.current_select_layer->opacity, 0, 100, "%.1f");
             ImGui::InputText("Name", canvas.current_select_layer->name, IM_ARRAYSIZE(canvas.current_select_layer->name));
             ImGui::Text("Layer type: %s", canvas.current_select_layer->type_or_blend_to_cstr());
@@ -325,8 +324,6 @@ i32 main()
         }
         ImGui::SameLine();
         ImGui::Text("Secondary Color%s", (canvas.current_color == 1 ? " (Selected)" : ""));
-        sf::Color color = canvas.current_color == 0 ? sf::Color((i32)(canvas.primary_color.x * 255), (i32)(canvas.primary_color.y * 255), (i32)(canvas.primary_color.z * 255)) : sf::Color((i32)(canvas.secondary_color.x * 255), (i32)(canvas.secondary_color.y * 255), (i32)(canvas.secondary_color.z * 255));
-        ImGui::Text("(%i, %i, %i)", color.r, color.g, color.b);
         ImGui::End();
 
         // the tools panel
@@ -574,13 +571,6 @@ i32 main()
         ImGui::Text("Mouse canvas world position: (%.1f, %.1f)", canvas.mouse_p.x, canvas.mouse_p.y);
         ImGui::Text("Mouse left held: %i", vars.mouse_l_held);
         ImGui::Text("Mouse right held: %i", vars.mouse_r_held);
-        ImGui::Separator();
-        std::string strokes = "Brush Strokes: ";
-        for (auto& s : tools.brush_strokes)
-        {
-            strokes += std::string("(") + std::to_string(s.pos.x) + std::string(", ") + std::to_string(s.pos.y) + std::string(") ");
-        }
-        ImGui::Text(strokes.c_str());
         ImGui::End();
 #endif
 
