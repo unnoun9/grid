@@ -11,7 +11,7 @@ struct Tools;
 struct Canvas
 {
     std::vector<Layer> layers;                      // for now this, but later maybe implement a better place to hold layers whose m_graphic can be other things too, not only raster
-    Layer* current_select_layer = NULL;             // self-explanatory; its value is set through the imgui layer panel
+    Layer* current_select_layer = NULL;             // self-explanatory; its value is set through the imgui layer panel; maybe use an i32 index for this instead of pointer, since std::vector<Layer> will potentially move its layers when new layers are added
     sf::RenderTexture window_texture;               // the place where everything will ultimately be drawn; replaces RenderWindow
     sf::RenderTexture texture;                      // a texture that simulates the canvas; this is the actual place where stuff if present
     bool initialized = false;                       // represents whether or not the canvas was loaded with an image for the first time or if a new blank image was created

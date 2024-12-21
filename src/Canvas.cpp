@@ -15,7 +15,7 @@ Canvas::Canvas(vec2 window_size)
 const char* Canvas::default_layer_name()
 {
     char* name = (char*)alloca(LAYER_NAME_MAX_LENGTH * sizeof(char));
-    sprintf(name, "Layer %d", layers.size() + 1);
+    sprintf(name, "layer %d", layers.size() + 1);
     return name;
 }
 
@@ -108,12 +108,21 @@ void Canvas::draw()
     }
 
     // draw layers
+    auto has_visible_layers_beneath = [](i32 index, const std::vector<Layer>& layers) -> bool // returns true if there is a layer beneath the given layer that is visible
+    {
+        for (i32 i = index - 1; i >= 0; i--)
+        {
+            if (layers[i].is_visible)
+                return true;
+        }
+        return false;
+    };
     static i32 frame = -1;
     frame++;
     for (i32 i = 0; i < layers.size(); i++)
     {
         const Layer& layer = layers[i];
-        if (layer.is_visible == false)
+        if (!layer.is_visible || layer.is_deleted)
             continue;
 
         switch (layer.type)
@@ -126,9 +135,14 @@ void Canvas::draw()
             c.a = (ui8)(layer.opacity / 100.f * 255);
             img->sprite.setColor(c);
 
-            if (i > 0)
+            // draw directly if: 1) layer's blend mode is normal or 2) no visible layers beneath or 3) layer is the bottom layer
+            if (i < 1 || !has_visible_layers_beneath(i, layers) || layer.blend == Layer::NORMAL)
             {
-                sf::Shader& blend_shader = assets->shader_map.at(util::title_to_pascal(layer_blend_str[layer.blend]));
+                texture.draw(img->sprite);
+            }
+            else
+            {
+                sf::Shader& blend_shader = assets->get_shader(util::title_to_pascal(layer_blend_str[layer.blend]));
 
                 // top layer
                 texb.clear(sf::Color(0, 0, 0, 0));
@@ -171,14 +185,7 @@ void Canvas::draw()
 
                 // draw top layer with the blend mode
                 texture.draw(sf::Sprite(texb.getTexture()), &blend_shader);
-
             }
-            else
-            {
-                // draw the layer directly without blend mode, if it is the bottom layer
-                texture.draw(img->sprite);
-            }
-
             break;
         }
         // other layer types...

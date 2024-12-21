@@ -1,11 +1,13 @@
 #include "Raster.h"
 
+//..................................................................................................
 Raster::Raster()
 {
     texture.create(1, 1);
     sprite.setTexture(texture);
 }
 
+//..................................................................................................
 bool Raster::update_texture()
 {
     if (texture.getSize() != data.getSize() && !texture.create(data.getSize().x, data.getSize().y))
@@ -18,6 +20,7 @@ bool Raster::update_texture()
     return true;
 }
 
+//..................................................................................................
 bool Raster::loadfromfile(const std::string& path)
 {
     if (!data.loadFromFile(path))

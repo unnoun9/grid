@@ -3,7 +3,6 @@
 #include "gui.h"
 
 //..................................................................................................
-// the main menu bar
 void gui::show_menu_bar(Variables& vars)
 {
     if (ImGui::BeginMainMenuBar())
@@ -57,7 +56,6 @@ void gui::show_menu_bar(Variables& vars)
 }
 
 //..................................................................................................
-// open a dialog that opens an image
 void gui::show_open_dialog(Variables& vars)
 {
     if (!vars.show_open_img_dialog) return;
@@ -86,7 +84,6 @@ void gui::show_open_dialog(Variables& vars)
 }
 
 //..................................................................................................
-// almost the same as the above open dialog function
 void gui::show_saveas_dialog(Variables& vars)
 {
     if (!vars.show_saveas_img_dialog) return;

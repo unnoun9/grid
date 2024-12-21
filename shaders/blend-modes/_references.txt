@@ -1,0 +1,3 @@
+References for these blend modes:
+- https://en.wikipedia.org/wiki/Blend_modes
+- https://www.deepskycolors.com/tools-tutorials/formulas-for-photoshop-blending-modes/

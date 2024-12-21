@@ -1,5 +1,6 @@
 #include "util.h"
 
+//..................................................................................................
 // converts a PascalCase string to Title Case
 std::string util::pascal_to_title(const std::string& str)
 {
@@ -18,6 +19,7 @@ std::string util::pascal_to_title(const std::string& str)
     return title;
 }
 
+//..................................................................................................
 // converts a Title Case string to PascalCase
 std::string util::title_to_pascal(const std::string& str)
 {

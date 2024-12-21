@@ -11,6 +11,9 @@ struct Assets
     
     Assets();
     void loadfromfile(const std::string& path);
+    sf::Texture& get_texture(const std::string& name);
+    sf::Font& get_font(const std::string& name);
+    sf::Shader& get_shader(const std::string& name);
     const sf::Texture& get_texture(const std::string& name) const;
     const sf::Font& get_font(const std::string& name) const;
     const sf::Shader& get_shader(const std::string& name) const;
