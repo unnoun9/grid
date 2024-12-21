@@ -8,7 +8,7 @@ struct Tools
 {
     enum Type
     {
-        NO = 0, MOVE, BRUSH, ERASER, FILL,
+        NO = 0, MOVE, BRUSH, ERASER, FILL,COLOR_SELECTION,
         NUM_TOOLS
     };
 
@@ -38,3 +38,4 @@ void move(Tools&);
 void brush(Tools&);
 void eraser(Tools&);
 void fill(Tools&);
+void select_by_color(Tools&);

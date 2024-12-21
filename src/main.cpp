@@ -75,7 +75,8 @@ i32 main()
         "Move tool. Moves layers using the mouse input.",
         "Brush tool. The typical paint brush tool that can paint over layers, given its settings.",
         "Eraser tool. Erases contents of a layer.",
-        "Fill tool. Flood fills a color onto a valid region of a layer."
+        "Fill tool. Flood fills a color onto a valid region of a layer.",
+        "Select by Color tool. Selects a region by color."
     };
     canvas.tools = &tools;
 
@@ -250,6 +251,7 @@ i32 main()
         circ.setPosition(canvas.mouse_p - vec2(circ.getRadius(), circ.getRadius()));
         canvas.window_texture.draw(circ);
 
+        
         // the layers panel
         ImGui::Begin("Layers");
         // ability to customize the currently selected layer
@@ -518,6 +520,37 @@ i32 main()
             }
             vars.apply_gray_scale = false;
         }
+
+        //.....................................Selection by color tool cursor...........................
+
+        if (tools.current_tool == Tools::COLOR_SELECTION)
+        {
+            sf::CircleShape cursor_circle(5 * canvas.zoom_factor, 128);
+            cursor_circle.setFillColor(sf::Color(207, 207, 196, 75));
+            cursor_circle.setOutlineColor(sf::Color(196, 196, 207, 175));
+            cursor_circle.setOutlineThickness(1 * canvas.zoom_factor);
+            cursor_circle.setPosition(canvas.mouse_p - vec2(cursor_circle.getRadius(), cursor_circle.getRadius()));
+            canvas.window_texture.draw(cursor_circle);
+
+            static sf::Texture move_cursor_texture;
+            if (!move_cursor_texture.loadFromFile("assets/icons/color-selection.png"))
+            {
+                std::cerr << "Error: Failed to load cursor image." << std::endl;
+                return 0;
+            }
+
+            sf::Sprite move_cursor_sprite(move_cursor_texture);
+
+            float image_scale = (30 * canvas.zoom_factor) / move_cursor_texture.getSize().x;
+            move_cursor_sprite.setScale(image_scale, image_scale);
+
+            move_cursor_sprite.setOrigin(move_cursor_texture.getSize().x / 2.0f, move_cursor_texture.getSize().y / 2.0f);
+            move_cursor_sprite.setPosition(canvas.mouse_p.x + cursor_circle.getRadius()* 2 + 10 * canvas.zoom_factor, 
+                                           canvas.mouse_p.y - cursor_circle.getRadius() * 4);
+
+            canvas.window_texture.draw(move_cursor_sprite);
+        }
+
 
         // update the view to "navigate the canvas"
         // but prevent navigating if mouse not over the canvas window or if a modal window is there (see Action.cpp where this prevention occurs)        
