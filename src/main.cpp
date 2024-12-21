@@ -8,7 +8,7 @@
 #include "Action.h"
 #include "gui.h"
 #include "Variables.h"
-#include "util.hpp"
+#include "util.h"
 #include "Canvas.h"
 #include "Assets.h"
 #include "Tools.h"
@@ -60,13 +60,23 @@ i32 main()
     {
         // handle this more gracefully
         std::cerr << "Your machine does not support shaders. Without shaders, `grid` may not work properly or efficiently.\n";
-        std::cerr << "Perhaps your GPU drivers needs to be updated?\n";
+        std::cerr << "Perhaps your GPU drivers need to be updated?\n";
         shaders_available = false;
     }
 
+    // load the assets and register keybinds or shortcuts
+    Assets assets;
+    assets.loadfromfile("assets.txt");
+    // register_action({sf::Keyboard::LAlt}, "toggle_menubar");
+    register_action({sf::Keyboard::LControl, sf::Keyboard::N}, "new");
+    register_action({sf::Keyboard::LControl, sf::Keyboard::O}, "open");
+    register_action({sf::Keyboard::LControl, sf::Keyboard::LShift, sf::Keyboard::S}, "saveas");
+    register_action({sf::Keyboard::LControl, sf::Keyboard::Z}, "undo");
+    register_action({sf::Keyboard::LControl, sf::Keyboard::Y}, "redo");
+    register_action({sf::Keyboard::LControl, sf::Keyboard::LShift, sf::Keyboard::R}, "reset_canvas_navigation");
+
     // the one and the only, canvas!
     Canvas canvas(vec2(window.getSize().x * 0.7, window.getSize().y * 0.85));
-    i32 current_blend_mode_selected = 0;
 
     // da tools
     Tools tools(&canvas);
@@ -78,18 +88,8 @@ i32 main()
         "Fill tool. Flood fills a color onto a valid region of a layer.",
         "Select by Color tool. Selects a region by color."
     };
+    canvas.assets = &assets;
     canvas.tools = &tools;
-
-    // load the assets and register keybinds or shortcuts
-    Assets assets;
-    assets.loadfromfile("assets.txt");
-    register_action({sf::Keyboard::LAlt}, "toggle_menubar");
-    register_action({sf::Keyboard::LControl, sf::Keyboard::N}, "new");
-    register_action({sf::Keyboard::LControl, sf::Keyboard::O}, "open");
-    register_action({sf::Keyboard::LControl, sf::Keyboard::LShift, sf::Keyboard::S}, "saveas");
-    register_action({sf::Keyboard::LControl, sf::Keyboard::Z}, "undo");
-    register_action({sf::Keyboard::LControl, sf::Keyboard::Y}, "redo");
-    register_action({sf::Keyboard::LControl, sf::Keyboard::LShift, sf::Keyboard::R}, "reset_canvas_navigation");
 
     //................................................. MAIN LOOP .................................................
     while (running && window.isOpen())
@@ -218,7 +218,8 @@ i32 main()
         //................................................. UPDATE THE STATE OF THE PROGRAM, DRAW / RENDER GUI, CANVAS, AND EVERYTHING ELSE .................................................
         ImGui::SFML::Update(window, delta_clock.restart());
         ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
-        
+        ImGui::ShowDemoWindow();
+
         // draw canvas' stuff to the RenderTexture
         canvas.draw();
 
@@ -243,7 +244,7 @@ i32 main()
         ImGui::End();
         ImGui::PopStyleVar();
 
-        // this is just to debug mouse position relative to the canvas
+        // for now, this is just to debug mouse position relative to the canvas
         sf::CircleShape circ(5 * canvas.zoom_factor, 128);
         circ.setFillColor(sf::Color(207, 207, 196, 75));
         circ.setOutlineColor(sf::Color(196, 196, 207, 175));
@@ -254,26 +255,51 @@ i32 main()
         
         // the layers panel
         ImGui::Begin("Layers");
-        // ability to customize the currently selected layer
+        // gives ability to customize the currently selected layer
         if (canvas.current_select_layer)
         {
-            if (ImGui::Combo("Blend Mode", &current_blend_mode_selected, layer_blend_str, IM_ARRAYSIZE(layer_blend_str)))
-                canvas.current_select_layer->blend = (Layer::Blend_mode)current_blend_mode_selected;
-            ImGui::SliderFloat("Opacity", &canvas.current_select_layer->opacity, 0, 100, "%.1f");
+            ImGui::Combo("Blend Mode", (i32*)&canvas.current_select_layer->blend, layer_blend_str, IM_ARRAYSIZE(layer_blend_str));
+            ImGui::DragFloat("Opecity", &canvas.current_select_layer->opacity, 0.5f, 0.f, 100.f, "%.1f");
             ImGui::InputText("Name", canvas.current_select_layer->name, IM_ARRAYSIZE(canvas.current_select_layer->name));
             ImGui::Text("Layer type: %s", canvas.current_select_layer->type_or_blend_to_cstr());
             ImGui::Spacing(); ImGui::Spacing();
             ImGui::Separator();
             ImGui::Spacing(); ImGui::Spacing(); ImGui::Spacing();
         }
+        
         // each layer interactable widget
         for (i32 n = canvas.layers.size() - 1; n >= 0; n--)
         {
             Layer& layer = canvas.layers[n];
+
+            if (layer.is_deleted)
+                continue;
+
             ImGui::PushID(n);
             
+            // un/hides the layer
             ImGui::Checkbox("##", &layer.is_visible);
             ImGui::SameLine();
+
+            // duplicates the layer and puts it on top of the original layer
+            if (ImGui::Button("D"))
+            {
+                Layer duplicate(layer);
+                strncpy(duplicate.name, canvas.default_layer_name(), LAYER_NAME_MAX_LENGTH - 1);
+                duplicate.name[LAYER_NAME_MAX_LENGTH - 1] = '\0';
+
+                canvas.layers.insert(canvas.layers.begin() + n + 1, duplicate);
+            }
+            ImGui::SameLine();
+
+            // "deletes" the layer
+            if (ImGui::Button("X"))
+            {
+                layer.is_deleted = true;
+            }
+            ImGui::SameLine();
+            
+            // shows the current layer and allows it to be selected
             if (ImGui::Selectable(layer.name, canvas.current_select_layer == &layer))
                 canvas.current_select_layer = &layer;
 
@@ -300,9 +326,34 @@ i32 main()
                 }
                 ImGui::EndDragDropTarget();
             }
+
             ImGui::PopID();
-            ImGui::SameLine();
-            ImGui::Text("(%.0f,%.0f)", layer.pos.x, layer.pos.y);
+        }
+
+        // creates a new empty layer
+        if (canvas.initialized)
+        {
+            ImGui::Separator();
+            ImGui::Spacing(); ImGui::Spacing(); ImGui::Spacing();
+            if (ImGui::Button("Create new layer"))
+            {
+                Raster* img = new Raster();
+                img->data.create(canvas.size.x, canvas.size.y, sf::Color(0, 0, 0, 0));
+
+                if (img->update_texture())
+                {
+                    canvas.layers.emplace_back(
+                        canvas.default_layer_name(),
+                        (canvas.window_size - canvas.size) / 2,
+                        img, Layer::RASTER, Layer::NORMAL
+                    );
+                    canvas.current_select_layer = nullptr;
+                }
+                else
+                {
+                    delete img;
+                }
+            }
         }
         ImGui::End();
 
@@ -327,8 +378,6 @@ i32 main()
         }
         ImGui::SameLine();
         ImGui::Text("Secondary Color%s", (canvas.current_color == 1 ? " (Selected)" : ""));
-        sf::Color color = canvas.current_color == 0 ? sf::Color((i32)(canvas.primary_color.x * 255), (i32)(canvas.primary_color.y * 255), (i32)(canvas.primary_color.z * 255)) : sf::Color((i32)(canvas.secondary_color.x * 255), (i32)(canvas.secondary_color.y * 255), (i32)(canvas.secondary_color.z * 255));
-        ImGui::Text("(%i, %i, %i)", color.r, color.g, color.b);
         ImGui::End();
 
         // the tools panel
@@ -417,7 +466,7 @@ i32 main()
                         canvas.size.x / canvas.window_size.x,
                         canvas.size.y / canvas.window_size.y
                     );
-                    canvas.relative_zoom_factor = canvas.zoom_factor = vars.canvas_zoom_factor = 2 * image_scale;
+                    canvas.relative_zoom_factor = canvas.zoom_factor = vars.canvas_zoom_factor = 2.5 * image_scale;
                     canvas.navigate();
                     canvas.initialized = true;
 
@@ -472,7 +521,7 @@ i32 main()
                         canvas.size.x / canvas.window_size.x,
                         canvas.size.y / canvas.window_size.y
                     );
-                    canvas.relative_zoom_factor = canvas.zoom_factor = vars.canvas_zoom_factor = 2 * image_scale;
+                    canvas.relative_zoom_factor = canvas.zoom_factor = vars.canvas_zoom_factor = 2.5 * image_scale;
                     canvas.navigate();
                     canvas.initialized = true;
                 }
@@ -607,13 +656,6 @@ i32 main()
         ImGui::Text("Mouse canvas world position: (%.1f, %.1f)", canvas.mouse_p.x, canvas.mouse_p.y);
         ImGui::Text("Mouse left held: %i", vars.mouse_l_held);
         ImGui::Text("Mouse right held: %i", vars.mouse_r_held);
-        ImGui::Separator();
-        std::string strokes = "Brush Strokes: ";
-        for (auto& s : tools.brush_strokes)
-        {
-            strokes += std::string("(") + std::to_string(s.pos.x) + std::string(", ") + std::to_string(s.pos.y) + std::string(") ");
-        }
-        ImGui::Text(strokes.c_str());
         ImGui::End();
 #endif
 

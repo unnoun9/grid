@@ -1,4 +1,4 @@
-#include "util.hpp"
+#include "util.h"
 #include "Variables.h"
 #include "Canvas.h"
 
@@ -9,18 +9,13 @@ Canvas::Canvas(vec2 window_size)
     : window_size(window_size), view_center(window_size/2)
 {
     window_texture.create(window_size.x, window_size.y);
-    if (!checker_shader.loadFromFile("shaders/checker.frag", sf::Shader::Fragment))
-    {
-        std::cerr << "Failed to load checker shader.\n";
-        checker_shader_loaded = false;
-    }
 }
 
 //..................................................................................................
 const char* Canvas::default_layer_name()
 {
     char* name = (char*)alloca(LAYER_NAME_MAX_LENGTH * sizeof(char));
-    sprintf(name, "Layer %d", layers.size() + 1);
+    sprintf(name, "layer %d", layers.size() + 1);
     return name;
 }
 
@@ -62,9 +57,12 @@ void Canvas::draw()
     }
 
     // intermediate texture for drawing within canvas bounds
+    static sf::RenderTexture texa, texb;
     if (size != (vec2)texture.getSize())
     {
         texture.create(size.x, size.y);
+        texa.create(size.x, size.y);
+        texb.create(size.x, size.y);
         // set a view that clips layers to the canvas bouns
         sf::View canvas_view;
         canvas_view.setSize(size);
@@ -72,24 +70,26 @@ void Canvas::draw()
         texture.setView(canvas_view);
     }
     texture.clear();
+    texa.clear();
+    texb.clear();
 
     // draw the checker pattern first
     const float square_size = 16.f;
     float adj_square_size = (square_size * zoom_factor);
 
     // try to use shader for drawing the checker pattern
-    if (checker_shader_loaded && vars.use_checker_shader)
+    if (assets->shader_map.find("Checker") != assets->shader_map.end() && vars.use_checker_shader)
     {
-        adj_square_size = util::clamp(adj_square_size, 2.f, 64.f);
-        checker_shader.setUniform("sq_size", adj_square_size);
+        adj_square_size = std::round(util::clamp(adj_square_size, 2.f, 64.f));
+        assets->shader_map.at("Checker").setUniform("sq_size", adj_square_size);
         checker_rect.setSize(size);
         checker_rect.setPosition(vec2(0, 0)); // draw relative to intermediate texture
-        texture.draw(checker_rect, &checker_shader);
+        texture.draw(checker_rect, &assets->shader_map.at("Checker"));
     }
     // super slow non-shader checker drawing
     else
     {
-        adj_square_size = util::clamp(adj_square_size, 8.f, 64.f); // too small square_size lags the program;
+        adj_square_size = std::round(util::clamp(adj_square_size, 8.f, 64.f)); // too small square_size lags the program;
         
         sf::View v = window_texture.getView();
         // sf::FloatRect view_rect(vec2(v.getCenter().x - v.getSize().x / 2, v.getCenter().y - v.getSize().y / 2), v.getSize());
@@ -108,9 +108,21 @@ void Canvas::draw()
     }
 
     // draw layers
-    for (auto& layer : layers)
+    auto has_visible_layers_beneath = [](i32 index, const std::vector<Layer>& layers) -> bool // returns true if there is a layer beneath the given layer that is visible
     {
-        if (layer.is_visible == false)
+        for (i32 i = index - 1; i >= 0; i--)
+        {
+            if (layers[i].is_visible)
+                return true;
+        }
+        return false;
+    };
+    static i32 frame = -1;
+    frame++;
+    for (i32 i = 0; i < layers.size(); i++)
+    {
+        const Layer& layer = layers[i];
+        if (!layer.is_visible || layer.is_deleted)
             continue;
 
         switch (layer.type)
@@ -118,14 +130,62 @@ void Canvas::draw()
         case Layer::RASTER:
         {
             Raster* img = (Raster*)layer.graphic;
-
             img->sprite.setPosition(layer.pos - start_pos);
-
             sf::Color c = img->sprite.getColor();
             c.a = (ui8)(layer.opacity / 100.f * 255);
             img->sprite.setColor(c);
 
-            texture.draw(img->sprite);
+            // draw directly if: 1) layer's blend mode is normal or 2) no visible layers beneath or 3) layer is the bottom layer
+            if (i < 1 || !has_visible_layers_beneath(i, layers) || layer.blend == Layer::NORMAL)
+            {
+                texture.draw(img->sprite);
+            }
+            else
+            {
+                sf::Shader& blend_shader = assets->get_shader(util::title_to_pascal(layer_blend_str[layer.blend]));
+
+                // top layer
+                texb.clear(sf::Color(0, 0, 0, 0));
+                texb.draw(img->sprite);
+                texb.display();
+                blend_shader.setUniform("texture2", texb.getTexture());
+
+                // bottom layer
+                texa.clear(sf::Color(0, 0, 0, 0));
+                for (i32 j = 0; j < i; j++)
+                {
+                    if (!layers[j].is_visible)
+                        continue;
+                    
+                    switch (layers[j].type)
+                    {
+                    case Layer::RASTER:
+                    {
+                        Raster* img = (Raster*)layers[j].graphic;
+                        img->sprite.setPosition(layers[j].pos - start_pos);
+                        sf::Color c = img->sprite.getColor();
+                        c.a = (ui8)(layers[j].opacity / 100.f * 255);
+                        img->sprite.setColor(c);
+                        texa.draw(img->sprite);
+                        break;
+                    }
+                    // other layer types...
+                    default:
+                    {
+                        break;
+                    }
+                    }
+                }
+                texa.display();
+                blend_shader.setUniform("texture1", texa.getTexture());
+                
+                blend_shader.setUniform("alpha", layer.opacity / 100.f);
+                if (layer.blend == Layer::DISSOLVE)
+                    blend_shader.setUniform("seed", frame);
+
+                // draw top layer with the blend mode
+                texture.draw(sf::Sprite(texb.getTexture()), &blend_shader);
+            }
             break;
         }
         // other layer types...
@@ -162,7 +222,7 @@ void Canvas::navigate()
     sf::View view = window_texture.getView();
 
     // this needs to be dynamic, based on the canvas / image size or perhaps window size too
-    float lower_bound = (checker_shader_loaded && vars.use_checker_shader ? 0.002f : 0.1f), upper_bound = 20.f;
+    float lower_bound = (assets->shader_map.find("Checker") == assets->shader_map.end() && vars.use_checker_shader ? 0.002f : 0.1f), upper_bound = 20.f;
     vars.canvas_zoom_factor = util::clamp(vars.canvas_zoom_factor, lower_bound, upper_bound);
     zoom_factor = util::clamp(zoom_factor, lower_bound, upper_bound);
 

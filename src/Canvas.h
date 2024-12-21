@@ -2,6 +2,7 @@
 #include <SFML/Graphics.hpp>
 #include "imgui.h"
 #include "Layer.h"
+#include "Assets.h"
 #include "Tools.h"
 
 struct Tools;
@@ -10,7 +11,7 @@ struct Tools;
 struct Canvas
 {
     std::vector<Layer> layers;                      // for now this, but later maybe implement a better place to hold layers whose m_graphic can be other things too, not only raster
-    Layer* current_select_layer = NULL;             // self-explanatory; its value is set through the imgui layer panel
+    Layer* current_select_layer = NULL;             // self-explanatory; its value is set through the imgui layer panel; maybe use an i32 index for this instead of pointer, since std::vector<Layer> will potentially move its layers when new layers are added
     sf::RenderTexture window_texture;               // the place where everything will ultimately be drawn; replaces RenderWindow
     sf::RenderTexture texture;                      // a texture that simulates the canvas; this is the actual place where stuff if present
     bool initialized = false;                       // represents whether or not the canvas was loaded with an image for the first time or if a new blank image was created
@@ -26,12 +27,10 @@ struct Canvas
     ImVec4 primary_color = ImVec4(1, 1, 1, 1);      // the "foreground" color
     ImVec4 secondary_color = ImVec4(0, 0, 0, 0);    // the "background" color
     i32 current_color = 0;                          // 0 means foreground color is selected; 1 means background color is selected
-
-    sf::Shader checker_shader;                      // contains the checker.frag shader
-    bool checker_shader_loaded = true;              // if this is false, then manual checker drawing will be used instead of shaders
     sf::RectangleShape checker_rect;                // this rect is where the checker shader does its thing
-
+    Assets* assets;                                 // to access assets' variables
     Tools* tools;                                   // to access tool's variables
+    sf::RenderTexture prev_layer_Tex;
 
     Canvas(vec2 window_size);
 

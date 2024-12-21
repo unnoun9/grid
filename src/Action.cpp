@@ -93,13 +93,19 @@ void do_action(const Action& action)
         else if (action.name == "new")
         {
             vars.show_new_img_dialog = true;   
+            vars.show_open_img_dialog = false;
+            vars.show_saveas_img_dialog = false;
         }
         else if (action.name == "open")
         {
+            vars.show_new_img_dialog = false;   
             vars.show_open_img_dialog = true;
+            vars.show_saveas_img_dialog = false;
         }
         else if (action.name == "saveas")
         {
+            vars.show_new_img_dialog = false;
+            vars.show_open_img_dialog = false;
             vars.show_saveas_img_dialog = true;
         }
         else if (action.name == "undo")
