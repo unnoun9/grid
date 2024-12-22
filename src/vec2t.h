@@ -4,6 +4,7 @@
 #include <SFML/System/Vector2.hpp>
 
 #include "int.h"
+#include "util.h"
 
 #define PI 3.14159265359
 #define DEGREE 0.01745329251
@@ -67,7 +68,7 @@ struct vec2t
     // the actual length or magnitude
     T magnitude() const
     {
-        return std::sqrt(dot(*this));
+        return util::sqrt(dot(*this));
     }
 
     // normalize to make a unit vector

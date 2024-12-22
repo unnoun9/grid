@@ -32,7 +32,7 @@ struct Layer
     vec2 pos;                                           // layer's position in the canvas (maybe not needed since the graphic may contain that (as the RASTER graphic does)?)
     float opacity = 100.f;                              // layer's opacity or state of transparency
     bool is_visible = true;                             // self-explanatory
-    bool is_deleted = false;                             // self-explanatory
+    bool is_deleted = false;                            // self-explanatory
     Blend_mode blend = NORMAL;                          // specifies how the current layer's pixels and graphics behave w.r.t layers below it
     void* graphic = nullptr;                            // a graphic which could be a raster image, text, shape, etc
     

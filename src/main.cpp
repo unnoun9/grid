@@ -74,6 +74,14 @@ i32 main()
     register_action({sf::Keyboard::LControl, sf::Keyboard::Z}, "undo");
     register_action({sf::Keyboard::LControl, sf::Keyboard::Y}, "redo");
     register_action({sf::Keyboard::LControl, sf::Keyboard::LShift, sf::Keyboard::R}, "reset_canvas_navigation");
+    register_action({sf::Keyboard::N}, "no_tool");
+    register_action({sf::Keyboard::V}, "move_tool");
+    register_action({sf::Keyboard::B}, "brush_tool");
+    register_action({sf::Keyboard::LBracket}, "tool_size_down");
+    register_action({sf::Keyboard::RBracket}, "tool_size_up");
+    register_action({sf::Keyboard::B}, "brush_tool");
+    register_action({sf::Keyboard::E}, "eraser_tool");
+    register_action({sf::Keyboard::G}, "fill_tool");
 
     // the one and the only, canvas!
     Canvas canvas(vec2(window.getSize().x * 0.7, window.getSize().y * 0.85));
@@ -86,7 +94,7 @@ i32 main()
         "Brush tool. The typical paint brush tool that can paint over layers, given its settings.",
         "Eraser tool. Erases contents of a layer.",
         "Fill tool. Flood fills a color onto a valid region of a layer.",
-        "Select by Color tool. Selects a region by color."
+        "Color selection tool. Selects a region based on the color clicked."
     };
     canvas.assets = &assets;
     canvas.tools = &tools;
@@ -105,16 +113,6 @@ i32 main()
             if (event.type == sf::Event::Closed)
                 quit(running, window);
 
-            // will probably remove this when done; this is just a convenient way to exit the application
-            if (event.type == sf::Event::KeyPressed)
-                if (event.key.code == sf::Keyboard::Escape)
-                {
-                    if (vars.show_new_img_dialog) vars.show_new_img_dialog = false;
-                    else if (vars.show_open_img_dialog) vars.show_open_img_dialog = false;
-                    else if (vars.show_saveas_img_dialog) vars.show_saveas_img_dialog = false;
-                    else quit(running, window);
-                }
-                
             // when the window is resized update the window's view and canvas' view-related variables to  ensure no stretching occurs
             if (event.type == sf::Event::Resized)
             {
@@ -129,6 +127,18 @@ i32 main()
             // main keyboard events below
             if (event.type == sf::Event::KeyPressed)
             {
+                // will probably remove this when done; this is just a convenient way to exit the application
+                if (event.key.code == sf::Keyboard::Escape)
+                {
+                    if (vars.show_new_img_dialog) vars.show_new_img_dialog = false;
+                    else if (vars.show_open_img_dialog) vars.show_open_img_dialog = false;
+                    else if (vars.show_saveas_img_dialog) vars.show_saveas_img_dialog = false;
+                    else quit(running, window);
+
+                    if (ImGuiFileDialog::Instance()->IsOpened())
+                        ImGuiFileDialog::Instance()->Close();
+                }
+
                 // remember the pressed key
                 currently_pressed_keys.emplace_back(event.key.code);
 
@@ -137,7 +147,9 @@ i32 main()
                     continue;
 
                 // call do_action with the correct action data
-                do_action(Action(action_map.at(currently_pressed_keys), Action::START));
+                Action a = Action(action_map.at(currently_pressed_keys), Action::START);
+                a.tools = &tools;
+                do_action(a);
             }
             else if (event.type == sf::Event::KeyReleased)
             {
@@ -156,20 +168,20 @@ i32 main()
                 {
                 case sf::Mouse::Left:
                 {
-                    if (tools.layer)
+                    if (canvas.current_layer)
                     {
                         // the following is the move tool's activation logic
                         vec2 layer_size;
-                        if (tools.layer->type == Layer::RASTER)
-                            layer_size = ((Raster*)tools.layer->graphic)->data.getSize();
+                        if (canvas.current_layer->type == Layer::RASTER)
+                            layer_size = ((Raster*)canvas.current_layer->graphic)->data.getSize();
                         // handle other layer types
                         else;
 
-                        sf::FloatRect bounds(tools.layer->pos, layer_size);
+                        sf::FloatRect bounds(canvas.current_layer->pos, layer_size);
                         if (bounds.contains(canvas.mouse_p))
                         {
                             tools.is_dragging = true;
-                            tools.layer_offset = canvas.mouse_p - tools.layer->pos;
+                            tools.layer_offset = canvas.mouse_p - canvas.current_layer->pos;
                         }
                     }
 
@@ -215,11 +227,12 @@ i32 main()
             }
         }
 
-        //................................................. UPDATE THE STATE OF THE PROGRAM, DRAW / RENDER GUI, CANVAS, AND EVERYTHING ELSE .................................................
+        //................................................. UPDATE THE STATE OF THE PROGRAM, DRAW / RENDER GUI, CANVAS, AND EVERYTHING ELSE BELOW! .................................................
         ImGui::SFML::Update(window, delta_clock.restart());
         ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
         ImGui::ShowDemoWindow();
 
+        //................................................. CANVAS DRAWING & WINDOW .................................................
         // draw canvas' stuff to the RenderTexture
         canvas.draw();
 
@@ -251,17 +264,28 @@ i32 main()
         circ.setOutlineThickness(1 * canvas.zoom_factor);
         circ.setPosition(canvas.mouse_p - vec2(circ.getRadius(), circ.getRadius()));
         canvas.window_texture.draw(circ);
+        // color selection tool cursor ;-;
+        if (tools.current_tool == Tools::COLOR_SELECTION)
+        {
+            sf::Sprite cursor_sprite(assets.get_texture("6ColorSelectionTool"));
+            float scale = 20 * canvas.zoom_factor / cursor_sprite.getTexture()->getSize().x;
+            cursor_sprite.setScale(scale, scale);
+            cursor_sprite.setOrigin(cursor_sprite.getTexture()->getSize().x / 2.0f, cursor_sprite.getTexture()->getSize().y / 2.0f);
+            cursor_sprite.setPosition(canvas.mouse_p.x + circ.getRadius() * 2 + 10 * canvas.zoom_factor, 
+                                           canvas.mouse_p.y - circ.getRadius() * 4);
+            canvas.window_texture.draw(cursor_sprite);
+        }
+        canvas.window_texture.display();
 
-        
-        // the layers panel
+        //................................................. THE LAYERS PANEL .................................................
         ImGui::Begin("Layers");
         // gives ability to customize the currently selected layer
-        if (canvas.current_select_layer)
+        if (canvas.current_layer)
         {
-            ImGui::Combo("Blend Mode", (i32*)&canvas.current_select_layer->blend, layer_blend_str, IM_ARRAYSIZE(layer_blend_str));
-            ImGui::DragFloat("Opecity", &canvas.current_select_layer->opacity, 0.5f, 0.f, 100.f, "%.1f");
-            ImGui::InputText("Name", canvas.current_select_layer->name, IM_ARRAYSIZE(canvas.current_select_layer->name));
-            ImGui::Text("Layer type: %s", canvas.current_select_layer->type_or_blend_to_cstr());
+            ImGui::Combo("Blend Mode", (i32*)&canvas.current_layer->blend, layer_blend_str, IM_ARRAYSIZE(layer_blend_str));
+            ImGui::DragFloat("Opecity", &canvas.current_layer->opacity, 0.5f, 0.f, 100.f, "%.1f");
+            ImGui::InputText("Name", canvas.current_layer->name, IM_ARRAYSIZE(canvas.current_layer->name));
+            ImGui::Text("Layer type: %s", canvas.current_layer->type_or_blend_to_cstr());
             ImGui::Spacing(); ImGui::Spacing();
             ImGui::Separator();
             ImGui::Spacing(); ImGui::Spacing(); ImGui::Spacing();
@@ -300,8 +324,8 @@ i32 main()
             ImGui::SameLine();
             
             // shows the current layer and allows it to be selected
-            if (ImGui::Selectable(layer.name, canvas.current_select_layer == &layer))
-                canvas.current_select_layer = &layer;
+            if (ImGui::Selectable(layer.name, canvas.current_layer == &layer))
+                canvas.current_layer = &layer;
 
             // drag and drop functionality
             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
@@ -327,12 +351,15 @@ i32 main()
                 ImGui::EndDragDropTarget();
             }
 
+            ImGui::SameLine();
+            ImGui::Text("Pos: (%.0f, %.0f)", layer.pos.x, layer.pos.y);
             ImGui::PopID();
         }
 
         // creates a new empty layer
         if (canvas.initialized)
         {
+            ImGui::Spacing(); ImGui::Spacing();
             ImGui::Separator();
             ImGui::Spacing(); ImGui::Spacing(); ImGui::Spacing();
             if (ImGui::Button("Create new layer"))
@@ -347,7 +374,7 @@ i32 main()
                         (canvas.window_size - canvas.size) / 2,
                         img, Layer::RASTER, Layer::NORMAL
                     );
-                    canvas.current_select_layer = nullptr;
+                    canvas.current_layer = nullptr;
                 }
                 else
                 {
@@ -357,7 +384,7 @@ i32 main()
         }
         ImGui::End();
 
-        // color panel
+        //................................................. THE COLOR PANEL .................................................
         ImGui::Begin("Color");
         ImGui::Spacing();
         float* color_to_edit = (float*)&(canvas.current_color == 0 ? canvas.primary_color : canvas.secondary_color);
@@ -380,8 +407,9 @@ i32 main()
         ImGui::Text("Secondary Color%s", (canvas.current_color == 1 ? " (Selected)" : ""));
         ImGui::End();
 
-        // the tools panel
+        //................................................. THE TOOLS PANEL .................................................
         ImGui::Begin("Tools");
+        // show each tool and allow them to be selected
         i32 i = 0;
         for (auto& [tool_name, tool_texture] : assets.texture_map)
         {
@@ -396,33 +424,50 @@ i32 main()
 
             // clicked tool is activated, rest are deactivated
             if (ImGui::ImageButton(tool_name.c_str(), tool_texture.getNativeHandle(), ImVec2(22, 22)))
-            {
                 tools.current_tool = i;
-            }
 
             // only pop if we pushed
             if (is_selected)
-            {
                 ImGui::PopStyleColor(3);
-            }
 
             if (ImGui::IsItemHovered(ImGuiHoveredFlags_Stationary))
                 ImGui::SetTooltip(tools_tooltips[i]);
             ImGui::SameLine();
             i++;
         }
+
+        //................................................. THE TOOLS SETTINGS AREA .................................................
+        ImGui::Spacing();
+        if (tools.current_tool == Tools::BRUSH)
+        {
+            ImGui::SeparatorText("Brush Settings");
+            ImGui::DragInt("Size", &tools.brush_size, 1, 1, 2000, "%dpx");
+            // ImGui::SliderFloat("Hardness", &tools.brush_hardness, 0.f, 100.f, "%.1f%%");
+            ImGui::SliderFloat("Opacity", &tools.brush_opacity, 0.f, 100.f, "%.1f%%");
+        }
+        else if (tools.current_tool == Tools::ERASER)
+        {
+            ImGui::SeparatorText("Eraser Settings");
+            ImGui::DragInt("Size", &tools.eraser_size, 1, 1, 2000, "%dpx");
+            // ImGui::SliderFloat("Hardness", &tools.eraser_hardness, 0.f, 100.f, "%.1f%%");
+            ImGui::SliderFloat("Opacity", &tools.eraser_opacity, 0.f, 100.f, "%.1f%%");
+        }
+        else if (tools.current_tool == Tools::FILL)
+        {
+            ImGui::SeparatorText("Fill Settings");
+            ImGui::SliderFloat("Tolerance", &tools.fill_tolerance, 0.f, 100.f, "%.1f%%");
+        }
         ImGui::End();
 
-        // use a tool
-        tools.layer = canvas.current_select_layer;
-        tools.use_current_tool[tools.current_tool](tools);
+        //................................................. USING THE CURRENT TOOL .................................................
+        if (canvas.initialized && vars.canvas_focused) tools.use_current_tool[tools.current_tool](tools);
 
-        // menu bar at the top
+        //................................................. OTHER GUI STUFF LIKE MENU BAR AND DIALOGS .................................................
         if (vars.show_menu_bar) gui::show_menu_bar(vars);
         if (vars.show_open_img_dialog) gui::show_open_dialog(vars);
         if (vars.show_saveas_img_dialog) gui::show_saveas_dialog(vars);
 
-        // new image
+        //................................................. NEW IMAGE .................................................
         if (vars.show_new_img_dialog)
         {
             ImGui::OpenPopup("New Image##modal");
@@ -482,17 +527,16 @@ i32 main()
                     if (img->update_texture())
                     {
                         canvas.layers.emplace_back(
-                            canvas.default_layer_name(),
+                            "layer 1",
                             (canvas.window_size - canvas.size) / 2,
                             img, Layer::RASTER, Layer::NORMAL
                         );
-                        canvas.current_select_layer = nullptr;
+                        canvas.current_layer = nullptr; // &canvas.layers.back();
                     }
                     else
                     {
                         delete img;
                     }
-
 
                     vars.show_new_img_dialog = false;
                     ImGui::CloseCurrentPopup();
@@ -501,7 +545,8 @@ i32 main()
             }
         }
 
-        // open image (in a separate canvas window?)
+        //................................................. OPEN IMAGE .................................................
+        // in a separate canvas window?
         // (maybe ask the user a question to see whether they want to open the image in a new canvas or in the same)
         // (if in the same canvas then the following behaviour is correct, i think)
         // (otherwise, maybe create a new canvas variable and push it to std::vector<Canvas>??)
@@ -534,14 +579,14 @@ i32 main()
                     img_pos,
                     img, Layer::RASTER, Layer::NORMAL
                 );
-                canvas.current_select_layer = nullptr;
+                canvas.current_layer = nullptr; // &canvas.layers.back();
             }
             else
                 delete img;
             vars.open_image = false;
         }
 
-        // save image
+        //................................................. SAVE IMAGE .................................................
         if (vars.save_image)
         {
             if (canvas.layers.empty())
@@ -556,7 +601,7 @@ i32 main()
             vars.save_image = false;
         }
 
-        // grayscale filter
+        //................................................. FILTERS .................................................
         if (vars.apply_gray_scale)
         {
             if (canvas.layers.empty())
@@ -570,37 +615,7 @@ i32 main()
             vars.apply_gray_scale = false;
         }
 
-        //.....................................Selection by color tool cursor...........................
-
-        if (tools.current_tool == Tools::COLOR_SELECTION)
-        {
-            sf::CircleShape cursor_circle(5 * canvas.zoom_factor, 128);
-            cursor_circle.setFillColor(sf::Color(207, 207, 196, 75));
-            cursor_circle.setOutlineColor(sf::Color(196, 196, 207, 175));
-            cursor_circle.setOutlineThickness(1 * canvas.zoom_factor);
-            cursor_circle.setPosition(canvas.mouse_p - vec2(cursor_circle.getRadius(), cursor_circle.getRadius()));
-            canvas.window_texture.draw(cursor_circle);
-
-            static sf::Texture move_cursor_texture;
-            if (!move_cursor_texture.loadFromFile("assets/icons/color-selection.png"))
-            {
-                std::cerr << "Error: Failed to load cursor image." << std::endl;
-                return 0;
-            }
-
-            sf::Sprite move_cursor_sprite(move_cursor_texture);
-
-            float image_scale = (30 * canvas.zoom_factor) / move_cursor_texture.getSize().x;
-            move_cursor_sprite.setScale(image_scale, image_scale);
-
-            move_cursor_sprite.setOrigin(move_cursor_texture.getSize().x / 2.0f, move_cursor_texture.getSize().y / 2.0f);
-            move_cursor_sprite.setPosition(canvas.mouse_p.x + cursor_circle.getRadius()* 2 + 10 * canvas.zoom_factor, 
-                                           canvas.mouse_p.y - cursor_circle.getRadius() * 4);
-
-            canvas.window_texture.draw(move_cursor_sprite);
-        }
-
-
+        //................................................. CANVAS NAVIGATION .................................................
         // update the view to "navigate the canvas"
         // but prevent navigating if mouse not over the canvas window or if a modal window is there (see Action.cpp where this prevention occurs)        
         // prevent navigation when canvas is not initialized as well
@@ -631,6 +646,7 @@ i32 main()
             vars.pan_delta *= canvas.initialized;
         }
 
+        //................................................. DEBUG WINDOW .................................................
 #if DEBUG == 1 // this is for debugging only
         // display the current pressed keys as they are pressed or released
         ImGui::Begin("Debug");
@@ -659,6 +675,7 @@ i32 main()
         ImGui::End();
 #endif
 
+        //................................................. END OF FRAME .................................................
         ImGui::SFML::Render(window);
         window.display();
         frames++;

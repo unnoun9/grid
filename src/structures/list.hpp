@@ -6,48 +6,45 @@ namespace ds
 {
 
 template <typename T>
-struct Node
+struct List
 {
-    T data;
-    Node* prev = nullptr;
-    Node* next = nullptr;
-};
+    template <typename T>
+    struct Node
+    {
+        T data;
+        Node* prev = nullptr;
+        Node* next = nullptr;
+    };
 
-template <typename T>
-class DoublyLinkedList
-{
-public:
-    // Constructor
-    DoublyLinkedList();
+    List();
     
-    // Destructor
-    ~DoublyLinkedList();
+    ~List();
 
-    // Insert element at the front of the list
+    // insert element at the front of the list
     void insert_front(const T& elem);
     
-    // Insert element at the back of the list
+    // insert element at the back of the list
     void insert_back(const T& elem);
 
-    // Remove and return element from the front of the list
+    // remove and return element from the front of the list
     T remove_front(bool& success);
     
-    // Remove and return element from the back of the list
+    // remove and return element from the back of the list
     T remove_back(bool& success);
 
-    // Get the front element of the list
+    // get the front element of the list
     T get_front(bool& success) const;
     
-    // Get the back element of the list
+    // get the back element of the list
     T get_back(bool& success) const;
 
-    // Check if the list is empty
+    // check if the list is empty
     bool is_empty() const;
     
-    // Get the current size of the list
+    // get the current size of the list
     ui32 get_size() const;
     
-    // Clear the list and free memory
+    // clear the list and free memory
     void clear();
     
 private:
@@ -58,18 +55,18 @@ private:
 
 // ..................................................................................................
 template <typename T>
-DoublyLinkedList<T>::DoublyLinkedList() : m_front(nullptr), m_back(nullptr), m_size(0) {}
+List<T>::List() : m_front(nullptr), m_back(nullptr), m_size(0) {}
 
 // ..................................................................................................
 template <typename T>
-DoublyLinkedList<T>::~DoublyLinkedList()
+List<T>::~List()
 {
     clear();
 }
 
 // ..................................................................................................
 template <typename T>
-void DoublyLinkedList<T>::insert_front(const T& elem)
+void List<T>::insert_front(const T& elem)
 {
     Node<T>* new_node = new Node<T>{elem};
     if (is_empty())
@@ -87,7 +84,7 @@ void DoublyLinkedList<T>::insert_front(const T& elem)
 
 // ..................................................................................................
 template <typename T>
-void DoublyLinkedList<T>::insert_back(const T& elem)
+void List<T>::insert_back(const T& elem)
 {
     Node<T>* new_node = new Node<T>{elem};
     if (is_empty())
@@ -105,12 +102,12 @@ void DoublyLinkedList<T>::insert_back(const T& elem)
 
 // ..................................................................................................
 template <typename T>
-T DoublyLinkedList<T>::remove_front(bool& success)
+T List<T>::remove_front(bool& success)
 {
     if (is_empty())
     {
         success = false;
-        return T(); // Return default-constructed value
+        return T();
     }
     success = true;
     Node<T>* temp = m_front;
@@ -119,7 +116,7 @@ T DoublyLinkedList<T>::remove_front(bool& success)
     if (m_front)
         m_front->prev = nullptr;
     else
-        m_back = nullptr; // List is now empty
+        m_back = nullptr; // list is now empty
     delete temp;
     m_size--;
     return data;
@@ -127,12 +124,12 @@ T DoublyLinkedList<T>::remove_front(bool& success)
 
 // ..................................................................................................
 template <typename T>
-T DoublyLinkedList<T>::remove_back(bool& success)
+T List<T>::remove_back(bool& success)
 {
     if (is_empty())
     {
         success = false;
-        return T(); // Return default-constructed value
+        return T();
     }
     success = true;
     Node<T>* temp = m_back;
@@ -141,7 +138,7 @@ T DoublyLinkedList<T>::remove_back(bool& success)
     if (m_back)
         m_back->next = nullptr;
     else
-        m_front = nullptr; // List is now empty
+        m_front = nullptr; // list is now empty
     delete temp;
     m_size--;
     return data;
@@ -149,12 +146,12 @@ T DoublyLinkedList<T>::remove_back(bool& success)
 
 // ..................................................................................................
 template <typename T>
-T DoublyLinkedList<T>::get_front(bool& success) const
+T List<T>::get_front(bool& success) const
 {
     if (is_empty())
     {
         success = false;
-        return T(); // Return default-constructed value
+        return T();
     }
     success = true;
     return m_front->data;
@@ -162,12 +159,12 @@ T DoublyLinkedList<T>::get_front(bool& success) const
 
 // ..................................................................................................
 template <typename T>
-T DoublyLinkedList<T>::get_back(bool& success) const
+T List<T>::get_back(bool& success) const
 {
     if (is_empty())
     {
         success = false;
-        return T(); // Return default-constructed value
+        return T();
     }
     success = true;
     return m_back->data;
@@ -175,21 +172,21 @@ T DoublyLinkedList<T>::get_back(bool& success) const
 
 // ..................................................................................................
 template <typename T>
-bool DoublyLinkedList<T>::is_empty() const
+bool List<T>::is_empty() const
 {
     return m_size == 0;
 }
 
 // ..................................................................................................
 template <typename T>
-ui32 DoublyLinkedList<T>::get_size() const
+ui32 List<T>::get_size() const
 {
     return m_size;
 }
 
 // ..................................................................................................
 template <typename T>
-void DoublyLinkedList<T>::clear()
+void List<T>::clear()
 {
     while (!is_empty())
     {

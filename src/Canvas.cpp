@@ -36,21 +36,12 @@ void Canvas::draw()
         // updating every raster image's center to match the checker pattern's center (maybe when more layer types are added, update their positions too?)
         for (auto& layer : layers)
         {
-            switch (layer.type)
-            {
-            case Layer::RASTER:
+            if (layer.type == Layer::RASTER)
             {
                 layer.pos += delta;
                 break;
             }
-            // other layer types...
-            // ...
-            default:
-            {
-
-                break;
-            }
-            }
+            else; // other layer types..
         }
         view_center = window_size / 2; // maybe make it only reset the center when resize is drastically bigger?
         navigate();
@@ -107,7 +98,7 @@ void Canvas::draw()
         }
     }
 
-    // draw layers
+    // draw layers with their blend modes
     auto has_visible_layers_beneath = [](i32 index, const std::vector<Layer>& layers) -> bool // returns true if there is a layer beneath the given layer that is visible
     {
         for (i32 i = index - 1; i >= 0; i--)
@@ -125,9 +116,7 @@ void Canvas::draw()
         if (!layer.is_visible || layer.is_deleted)
             continue;
 
-        switch (layer.type)
-        {
-        case Layer::RASTER:
+        if (layer.type == Layer::RASTER)
         {
             Raster* img = (Raster*)layer.graphic;
             img->sprite.setPosition(layer.pos - start_pos);
@@ -144,22 +133,14 @@ void Canvas::draw()
             {
                 sf::Shader& blend_shader = assets->get_shader(util::title_to_pascal(layer_blend_str[layer.blend]));
 
-                // top layer
-                texb.clear(sf::Color(0, 0, 0, 0));
-                texb.draw(img->sprite);
-                texb.display();
-                blend_shader.setUniform("texture2", texb.getTexture());
-
-                // bottom layer
+                // bottom layer uniform
                 texa.clear(sf::Color(0, 0, 0, 0));
                 for (i32 j = 0; j < i; j++)
                 {
                     if (!layers[j].is_visible)
                         continue;
                     
-                    switch (layers[j].type)
-                    {
-                    case Layer::RASTER:
+                    if (layers[j].type == Layer::RASTER)
                     {
                         Raster* img = (Raster*)layers[j].graphic;
                         img->sprite.setPosition(layers[j].pos - start_pos);
@@ -169,42 +150,29 @@ void Canvas::draw()
                         texa.draw(img->sprite);
                         break;
                     }
-                    // other layer types...
-                    default:
-                    {
-                        break;
-                    }
-                    }
+                    else; // other layer types..
                 }
                 texa.display();
                 blend_shader.setUniform("texture1", texa.getTexture());
-                
+
+                // top layer uniform
+                texb.clear(sf::Color(0, 0, 0, 0));
+                texb.draw(img->sprite);
+                texb.display();
+                blend_shader.setUniform("texture2", texb.getTexture());
+
+                // the alpha uniform                
                 blend_shader.setUniform("alpha", layer.opacity / 100.f);
+
+                // the seed uniform for dissolve blend mode
                 if (layer.blend == Layer::DISSOLVE)
                     blend_shader.setUniform("seed", frame);
 
                 // draw top layer with the blend mode
                 texture.draw(sf::Sprite(texb.getTexture()), &blend_shader);
             }
-            break;
         }
-        // other layer types...
-        // ...
-        default:
-        {
-
-            break;
-        }
-        }
-    }
-
-    // draw all brush strokes
-    sf::CircleShape stroke(tools->brush_size);
-    for (auto& s : tools->brush_strokes)
-    {
-        stroke.setPosition(s.pos - start_pos);
-        stroke.setFillColor(s.color);
-        texture.draw(stroke);
+        else; // other layer types..
     }
 
     texture.display();
@@ -222,7 +190,7 @@ void Canvas::navigate()
     sf::View view = window_texture.getView();
 
     // this needs to be dynamic, based on the canvas / image size or perhaps window size too
-    float lower_bound = (assets->shader_map.find("Checker") == assets->shader_map.end() && vars.use_checker_shader ? 0.002f : 0.1f), upper_bound = 20.f;
+    float lower_bound = (assets->shader_map.find("Checker") != assets->shader_map.end() && vars.use_checker_shader ? 0.002f : 0.01f), upper_bound = 20.f;
     vars.canvas_zoom_factor = util::clamp(vars.canvas_zoom_factor, lower_bound, upper_bound);
     zoom_factor = util::clamp(zoom_factor, lower_bound, upper_bound);
 

@@ -1,7 +1,7 @@
+#include <stack>
+
 #include "Variables.h"
 #include "Tools.h"
-#include <queue>
-#include <algorithm>
 
 extern Variables vars;
 
@@ -20,32 +20,32 @@ Tools::Tools(Canvas* canvas)
 //..................................................................................................
 void no(Tools& t)
 {
-    if (!t.layer)
+    if (!t.canvas->current_layer)
         return;
 }
 
 //..................................................................................................
 void move(Tools& t)
 {
-    if (!t.layer)
+    if (!t.canvas->current_layer)
         return;
 
     vec2 layer_size;
-    if (t.layer->type == Layer::RASTER)
-        layer_size = ((Raster*)t.layer->graphic)->data.getSize();
+    if (t.canvas->current_layer->type == Layer::RASTER)
+        layer_size = ((Raster*)t.canvas->current_layer->graphic)->data.getSize();
     // handle other layer types
     else;
     
     if (t.is_dragging)
     {
-        t.layer->pos = t.canvas->mouse_p - t.layer_offset;
+        t.canvas->current_layer->pos = t.canvas->mouse_p - t.layer_offset;
     }
 
-    sf::FloatRect bounds(t.layer->pos, layer_size);
+    sf::FloatRect bounds(t.canvas->current_layer->pos, layer_size);
     if (bounds.contains(t.canvas->mouse_p))
     {
         sf::RectangleShape rect(layer_size);
-        rect.setPosition(t.layer->pos);
+        rect.setPosition(t.canvas->current_layer->pos);
         rect.setOutlineColor(sf::Color(0, 127, 255));
         rect.setOutlineThickness(2 * t.canvas->zoom_factor);
         rect.setFillColor(sf::Color::Transparent);
@@ -56,49 +56,291 @@ void move(Tools& t)
 //..................................................................................................
 void brush(Tools& t)
 {
-    if (!t.layer)
+    if (!t.canvas->current_layer)
         return;
 
+    // function to draw a filled circle with anti-aliasing
+    auto draw_circle = [&t](const Tools::Point& p, Raster* raster, vec2 layer_size)
+    {
+        vec2i index = p.pos - t.canvas->current_layer->pos;
+        if (index.x < 0 || index.x >= layer_size.x || index.y < 0 || index.y >= layer_size.y)
+            return;
+
+        auto get_aa_factor = [&p](float dx, float dy, float radius)
+        {
+            float dist = util::sqrt(dx * dx + dy * dy);
+            
+            // hardness controls the anti-aliasing region (0.5 to 2.5 pixels)
+            float aa_region = 2.5f;
+            float offset = aa_region / 2.0f;
+            
+            float delta = dist - (radius - offset);
+            if (delta <= 0.0f) return 1.0f;
+            if (delta >= aa_region) return 0.0f;
+            
+            // smoother falloff curve
+            float t = 1.0f - (delta / aa_region);
+            return t * t;
+        };
+
+        auto set_pixel = [&](i32 x, i32 y, sf::Color color, float aa_factor)
+        {
+            if (x >= 0 && x < layer_size.x && y >= 0 && y < layer_size.y)
+            {
+                float final_opacity = (p.opacity / 100.f) * aa_factor;
+                sf::Color blended = util::blend_colors(color, raster->data.getPixel(x, y), final_opacity);
+                raster->data.setPixel(x, y, blended);
+            }
+        };
+
+        if (p.size == 1)
+        {
+            set_pixel(index.x, index.y, p.color, 1.0f);
+            return;
+        }
+        else if (p.size == 2)
+        {
+            set_pixel(index.x, index.y, p.color, 1.0f);
+            set_pixel(index.x + 1, index.y, p.color, 1.0f);
+            set_pixel(index.x, index.y + 1, p.color, 1.0f);
+            set_pixel(index.x + 1, index.y + 1, p.color, 1.0f);
+            return;
+        }
+
+        float radius = p.size / 2.f;
+        i32 ceil_radius = std::ceil(radius + 0.5f);
+        
+        for (i32 y = -ceil_radius; y <= ceil_radius; ++y)
+        {
+            for (i32 x = -ceil_radius; x <= ceil_radius; ++x)
+            {
+                float aa_factor = get_aa_factor(x, y, radius);
+                if (aa_factor > 0)
+                {
+                    set_pixel(index.x + x, index.y + y, p.color, aa_factor);
+                }
+            }
+        }
+    };
+
     vec2 layer_size;
-    if (t.layer->type == Layer::RASTER)
-        layer_size = ((Raster*)t.layer->graphic)->data.getSize();
-    // handle other layer types
-    else;
+    Raster* raster = nullptr;
+    if (t.canvas->current_layer->type == Layer::RASTER)
+    {
+        raster = (Raster*)t.canvas->current_layer->graphic;
+        layer_size = raster->data.getSize();
+    }
+    else
+    {
+        std::cerr << "Brush tool used on a non-raster layer\n";
+        return;
+    }
 
     static vec2 prev_mouse_p = t.canvas->mouse_p;
-    sf::FloatRect bounds(t.canvas->start_pos, t.canvas->size);
+    static bool was_drawing = false;
+
+    sf::FloatRect bounds(t.canvas->current_layer->pos, layer_size);
     if (vars.mouse_l_held && bounds.contains(t.canvas->mouse_p))
     {
-        sf::Color brush_color = t.canvas->current_color == 0 ? sf::Color((ui32)(t.canvas->primary_color.x * 255), (ui32)(t.canvas->primary_color.y * 255), (ui32)(t.canvas->primary_color.z * 255))
-                            : sf::Color((ui32)(t.canvas->secondary_color.x * 255), (ui32)(t.canvas->secondary_color.y * 255), (ui32)(t.canvas->secondary_color.z * 255));
-        // interpolate between last and current mouse positions
-        vec2 direction = t.canvas->mouse_p - prev_mouse_p;
-        float dist = direction.magnitude();
-        direction = dist ? direction / dist : vec2(0, 0);
-        for (i32 i = 0; i < dist; i += t.brush_size / 2)
+        sf::Color brush_color = t.canvas->current_color == 0
+            ? sf::Color((ui32)(t.canvas->primary_color.x * 255),
+                        (ui32)(t.canvas->primary_color.y * 255),
+                        (ui32)(t.canvas->primary_color.z * 255))
+            : sf::Color((ui32)(t.canvas->secondary_color.x * 255),
+                        (ui32)(t.canvas->secondary_color.y * 255),
+                        (ui32)(t.canvas->secondary_color.z * 255));
+
+        // just clicked - draw single circle
+        if (!was_drawing)
         {
-            vec2 interpolated_p = prev_mouse_p + direction * i - vec2(t.brush_size, t.brush_size);
-            t.brush_strokes.emplace_back(interpolated_p, brush_color);
+            draw_circle(Tools::Point(t.canvas->mouse_p, brush_color, t.brush_size, t.brush_opacity, t.brush_hardness), raster, layer_size);
+            raster->update_texture();
+            was_drawing = true;
+            prev_mouse_p = t.canvas->mouse_p;
+            return;
         }
-        t.brush_strokes.emplace_back(t.canvas->mouse_p - vec2(t.brush_size, t.brush_size), brush_color);
+
+        // distance moved
+        vec2 movement = t.canvas->mouse_p - prev_mouse_p;
+        float dist = movement.magnitude();
+        
+        // only draw new circles if we've moved enough distance
+        float spacing = t.brush_size * 0.2f; // kinda controls the stroke density
+        if (dist >= spacing)
+        {
+            vec2 direction = movement / dist;
+            i32 num_steps = std::floor(dist / spacing);
+            
+            // draw circles along the path with consistent spacing
+            for (i32 i = 1; i <= num_steps; i++)
+            {
+                vec2 pos = prev_mouse_p + direction * (spacing * i);
+                draw_circle(Tools::Point(pos, brush_color, t.brush_size, t.brush_opacity, t.brush_hardness), raster, layer_size);
+            }
+
+            raster->update_texture();
+            prev_mouse_p = prev_mouse_p + direction * (spacing * num_steps);
+        }
     }
-    prev_mouse_p = t.canvas->mouse_p;
+    else
+    {
+        was_drawing = false;
+    }
 }
 
 //..................................................................................................
 void eraser(Tools& t)
 {
-    if (!t.layer)
+    if (!t.canvas->current_layer)
         return;
+
+    // function to draw a filled circle with anti-aliasing
+    auto draw_circle = [&t](const Tools::Point& p, Raster* raster, vec2 layer_size)
+    {
+        vec2i index = p.pos - t.canvas->current_layer->pos;
+        if (index.x < 0 || index.x >= layer_size.x || index.y < 0 || index.y >= layer_size.y)
+            return;
+
+        auto get_aa_factor = [&p](float dx, float dy, float radius)
+        {
+            float dist = util::sqrt(dx * dx + dy * dy);
+            float aa_region = 2.5f;
+            float offset = aa_region / 2.0f;
+            
+            float delta = dist - (radius - offset);
+            if (delta <= 0.0f) return 1.0f;
+            if (delta >= aa_region) return 0.0f;
+            
+            float t = 1.0f - (delta / aa_region);
+            return t * t;
+        };
+
+        auto set_pixel = [&](i32 x, i32 y, float aa_factor)
+        {
+            if (x >= 0 && x < layer_size.x && y >= 0 && y < layer_size.y)
+            {
+                sf::Color pixel = raster->data.getPixel(x, y);
+                float erase_strength = (p.opacity / 100.f) * aa_factor;
+                pixel.a = static_cast<sf::Uint8>(pixel.a * (1.0f - erase_strength));
+                raster->data.setPixel(x, y, pixel);
+            }
+        };
+
+        if (p.size == 1)
+        {
+            set_pixel(index.x, index.y, 1.0f);
+            return;
+        }
+        else if (p.size == 2)
+        {
+            set_pixel(index.x, index.y, 1.0f);
+            set_pixel(index.x + 1, index.y, 1.0f);
+            set_pixel(index.x, index.y + 1, 1.0f);
+            set_pixel(index.x + 1, index.y + 1, 1.0f);
+            return;
+        }
+
+        float radius = p.size / 2.f;
+        i32 ceil_radius = std::ceil(radius + 0.5f);
+        
+        for (i32 y = -ceil_radius; y <= ceil_radius; ++y)
+        {
+            for (i32 x = -ceil_radius; x <= ceil_radius; ++x)
+            {
+                float aa_factor = get_aa_factor(x, y, radius);
+                if (aa_factor > 0)
+                {
+                    set_pixel(index.x + x, index.y + y, aa_factor);
+                }
+            }
+        }
+    };
+
+    vec2 layer_size;
+    Raster* raster = nullptr;
+    if (t.canvas->current_layer->type == Layer::RASTER)
+    {
+        raster = (Raster*)t.canvas->current_layer->graphic;
+        layer_size = raster->data.getSize();
+    }
+    else
+    {
+        std::cerr << "Eraser tool used on a non-raster layer\n";
+        return;
+    }
+
+    static vec2 prev_mouse_p = t.canvas->mouse_p;
+    static bool was_erasing = false;
+
+    sf::FloatRect bounds(t.canvas->current_layer->pos, layer_size);
+    if (vars.mouse_l_held && bounds.contains(t.canvas->mouse_p))
+    {
+        // just clicked - erase single circle
+        if (!was_erasing)
+        {
+            draw_circle(Tools::Point(t.canvas->mouse_p, sf::Color::Transparent, t.brush_size, t.brush_opacity, t.brush_hardness), raster, layer_size);
+            raster->update_texture();
+            was_erasing = true;
+            prev_mouse_p = t.canvas->mouse_p;
+            return;
+        }
+
+        vec2 movement = t.canvas->mouse_p - prev_mouse_p;
+        float dist = movement.magnitude();
+        
+        float spacing = t.brush_size * 0.2f;
+        if (dist >= spacing)
+        {
+            vec2 direction = movement / dist;
+            i32 num_steps = std::floor(dist / spacing);
+            
+            for (i32 i = 1; i <= num_steps; i++)
+            {
+                vec2 pos = prev_mouse_p + direction * (spacing * i);
+                draw_circle(Tools::Point(pos, sf::Color::Transparent, t.brush_size, t.brush_opacity, t.brush_hardness), raster, layer_size);
+            }
+
+            raster->update_texture();
+            prev_mouse_p = prev_mouse_p + direction * (spacing * num_steps);
+        }
+    }
+    else
+    {
+        was_erasing = false;
+    }
 }
 
 //..................................................................................................
 void fill(Tools& t)
 {
-    if (!t.layer)
+    if (!t.canvas->current_layer)
         return;
+
+    static bool was_held = false;
+    bool just_pressed = vars.mouse_l_held && !was_held;
+    was_held = vars.mouse_l_held;
+
+    Raster* raster = nullptr;
+    vec2 layer_size;
+    if (t.canvas->current_layer->type == Layer::RASTER)
+    {
+        raster = (Raster*)t.canvas->current_layer->graphic;
+        layer_size = raster->data.getSize();
+    }
+    else
+    {
+        std::cerr << "Fill tool used on a non-raster layer\n";
+        return;
+    }
+
+    sf::FloatRect bounds(t.canvas->start_pos, t.canvas->size);
+    if (just_pressed && bounds.contains(t.canvas->mouse_p))
+    {
+        // ...
+    }
 }
 
+//..................................................................................................
 sf::Color compute_average_color(Raster* raster, vec2 mouse_pos, int radius = 2)
 {
     sf::Image& image_data = raster->data;
@@ -141,7 +383,7 @@ sf::Image create_mask(Raster* raster, const sf::Color& target_color, float thres
         {
             sf::Color current_color = raster->data.getPixel(x, y);
 
-            //calculating the difference, then making it normalized to be in range 0-1
+            // calculating the difference, then making it normalized to be in range 0-1
             float color_diff = (std::abs(current_color.r - target_color.r) / 255.0f +
                                 std::abs(current_color.g - target_color.g) / 255.0f +
                                 std::abs(current_color.b - target_color.b) / 255.0f) / 3.0f;
@@ -166,7 +408,7 @@ void apply_mask_and_modify_image(Raster* raster, const sf::Image& mask)
         {
             if (mask.getPixel(x, y) == sf::Color::White)
             {                                                            
-                image_data.setPixel(x, y, sf::Color::White);                        // Changing the selected pixels in the image to white
+                image_data.setPixel(x, y, sf::Color::White);                        // changing the selected pixels in the image to white
             }
         }
     }
@@ -174,12 +416,12 @@ void apply_mask_and_modify_image(Raster* raster, const sf::Image& mask)
 
 void select_by_color(Tools& t)
 {
-    if (!t.layer)
+    if (!t.canvas->current_layer)
         return;
 
     vec2 layer_size;
-    if (t.layer->type == Layer::RASTER)
-        layer_size = ((Raster*)t.layer->graphic)->data.getSize();
+    if (t.canvas->current_layer->type == Layer::RASTER)
+        layer_size = ((Raster*)t.canvas->current_layer->graphic)->data.getSize();
     else
         return; 
 
@@ -188,7 +430,7 @@ void select_by_color(Tools& t)
 
     if (vars.mouse_l_held && bounds.contains(t.canvas->mouse_p)) 
     {
-        Raster* raster = (Raster*)t.layer->graphic;
+        Raster* raster = (Raster*)t.canvas->current_layer->graphic;
         vec2 mouse_pos = t.canvas->mouse_p;
 
         sf::Vector2f canvas_center = t.canvas->start_pos + t.canvas->size / 2.0f;
@@ -211,7 +453,7 @@ void select_by_color(Tools& t)
         apply_mask_and_modify_image(raster, mask);                                       // for now, i am making the selected pixels white
     }
 
-    Raster* raster = (Raster*)t.layer->graphic;
+    Raster* raster = (Raster*)t.canvas->current_layer->graphic;
 
     sf::Texture image_texture;
     image_texture.loadFromImage(raster->data);

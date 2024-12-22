@@ -2,6 +2,7 @@
 #include <SFML/Graphics.hpp>
 #include "Variables.h"
 #include "Action.h"
+#include "Tools.h"
 
 //..................................................................................................
 Action::Action()
@@ -55,6 +56,24 @@ void register_action(const std::list<int>& keys, const std::string& action_name)
 // does actions based on the data passed
 void do_action(const Action& action)
 {
+    auto get_size_increment = [](i32 current_size) -> i32
+    {
+        if (current_size >= 1 && current_size < 10) return 1;
+        if (current_size >= 10 && current_size < 50) return 5;
+        if (current_size >= 50 && current_size < 100) return 10;
+        if (current_size >= 100 && current_size < 500) return 50;
+        return 100;
+    };
+
+    auto get_size_decrement = [](i32 current_size) -> i32
+    {
+        if (current_size > 1 && current_size <= 10) return 1;
+        if (current_size > 10 && current_size <= 50) return 5;
+        if (current_size > 50 && current_size <= 100) return 10;
+        if (current_size > 100 && current_size <= 500) return 50;
+        return 100;
+    };
+
     if (action.name == "mouse_move")
     {
         if (vars.mouse_r_held && vars.canvas_focused)
@@ -69,7 +88,7 @@ void do_action(const Action& action)
     {
         if (vars.canvas_focused)
         {
-            const float percent_change = 0.1;
+            const float percent_change = 0.02;
             float change_factor = (action.ticks > 0 ? 1 - percent_change : 1 + percent_change);
             vars.canvas_zoom_factor *= change_factor;
             vars.navigate_canvas_right_now = true;
@@ -117,6 +136,52 @@ void do_action(const Action& action)
         else if (action.name == "reset_canvas_navigation")
         {
             vars.navigate_canvas_reset = true;
+        }
+        else if (action.name == "no_tool")
+        {
+            action.tools->current_tool = Tools::NO;
+        }
+        else if (action.name == "move_tool")
+        {
+            action.tools->current_tool = Tools::MOVE;
+        }
+        else if (action.name == "brush_tool")
+        {
+            action.tools->current_tool = Tools::BRUSH;
+        }
+        else if (action.name == "eraser_tool")
+        {
+            action.tools->current_tool = Tools::ERASER;
+        }
+        else if (action.name == "fill_tool")
+        {
+            action.tools->current_tool = Tools::FILL;
+        }
+        else if (action.name == "tool_size_down")
+        {
+            if (action.tools->current_tool == Tools::BRUSH)
+            {
+                int step = get_size_decrement(action.tools->brush_size);
+                action.tools->brush_size = std::max(1, action.tools->brush_size - step);
+            }
+            else if (action.tools->current_tool == Tools::ERASER)
+            {
+                int step = get_size_decrement(action.tools->eraser_size);
+                action.tools->eraser_size = std::max(1, action.tools->eraser_size - step);
+            }
+        }
+        else if (action.name == "tool_size_up")
+        {
+            if (action.tools->current_tool == Tools::BRUSH)
+            {
+                int step = get_size_increment(action.tools->brush_size);
+                action.tools->brush_size = std::min(2000, action.tools->brush_size + step);
+            }
+            else if (action.tools->current_tool == Tools::ERASER)
+            {
+                int step = get_size_increment(action.tools->eraser_size);
+                action.tools->eraser_size = std::min(2000, action.tools->eraser_size + step);
+            }
         }
     }
     else if (action.type == Action::END)
