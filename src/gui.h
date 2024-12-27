@@ -1,10 +1,10 @@
 #pragma once
 #include "Variables.h"
-#include "Raster.h"
+#include "Filters.h"
 
 // functions that call ImGui's functions to draw gui
 namespace gui {
-    void show_menu_bar(Variables&);
-    void show_open_dialog(Variables&);
-    void show_saveas_dialog(Variables&);
+    void menu_bar(Variables&, Filters&);
+    void open_dialog(Variables&);
+    void saveas_dialog(Variables&);
 }

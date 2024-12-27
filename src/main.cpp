@@ -12,6 +12,7 @@
 #include "Canvas.h"
 #include "Assets.h"
 #include "Tools.h"
+#include "Filters.h"
 
 //................................................. MACROS .................................................
 #define DEBUG 1 // macro to enable or disable custom debugging
@@ -99,6 +100,9 @@ i32 main()
     canvas.assets = &assets;
     canvas.tools = &tools;
 
+    // da filters
+    Filters filters(&canvas);
+
     //................................................. MAIN LOOP .................................................
     while (running && window.isOpen())
     {
@@ -168,20 +172,21 @@ i32 main()
                 {
                 case sf::Mouse::Left:
                 {
-                    if (canvas.current_layer)
+                    Layer* current_layer = canvas.current_layer();
+                    if (current_layer)
                     {
                         // the following is the move tool's activation logic
                         vec2 layer_size;
-                        if (canvas.current_layer->type == Layer::RASTER)
-                            layer_size = ((Raster*)canvas.current_layer->graphic)->data.getSize();
+                        if (current_layer->type == Layer::RASTER)
+                            layer_size = ((Raster*)current_layer->graphic)->data.getSize();
                         // handle other layer types
                         else;
 
-                        sf::FloatRect bounds(canvas.current_layer->pos, layer_size);
+                        sf::FloatRect bounds(current_layer->pos, layer_size);
                         if (bounds.contains(canvas.mouse_p))
                         {
                             tools.is_dragging = true;
-                            tools.layer_offset = canvas.mouse_p - canvas.current_layer->pos;
+                            tools.layer_offset = canvas.mouse_p - current_layer->pos;
                         }
                     }
 
@@ -234,7 +239,7 @@ i32 main()
 
         //................................................. CANVAS DRAWING & WINDOW .................................................
         // draw canvas' stuff to the RenderTexture
-        canvas.draw();
+        if (window.hasFocus()) canvas.draw();
 
         // the canvas window
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
@@ -280,12 +285,13 @@ i32 main()
         //................................................. THE LAYERS PANEL .................................................
         ImGui::Begin("Layers");
         // gives ability to customize the currently selected layer
-        if (canvas.current_layer)
+        Layer* current_layer = canvas.current_layer();
+        if (current_layer)
         {
-            ImGui::Combo("Blend Mode", (i32*)&canvas.current_layer->blend, layer_blend_str, IM_ARRAYSIZE(layer_blend_str));
-            ImGui::DragFloat("Opecity", &canvas.current_layer->opacity, 0.5f, 0.f, 100.f, "%.1f");
-            ImGui::InputText("Name", canvas.current_layer->name, IM_ARRAYSIZE(canvas.current_layer->name));
-            ImGui::Text("Layer type: %s", canvas.current_layer->type_or_blend_to_cstr());
+            ImGui::Combo("Blend Mode", (i32*)&current_layer->blend, layer_blend_str, IM_ARRAYSIZE(layer_blend_str));
+            ImGui::DragFloat("Opecity", &current_layer->opacity, 0.5f, 0.f, 100.f, "%.1f");
+            ImGui::InputText("Name", current_layer->name, IM_ARRAYSIZE(current_layer->name));
+            ImGui::Text("Layer type: %s", current_layer->type_or_blend_to_cstr());
             ImGui::Spacing(); ImGui::Spacing();
             ImGui::Separator();
             ImGui::Spacing(); ImGui::Spacing(); ImGui::Spacing();
@@ -295,7 +301,6 @@ i32 main()
         for (i32 n = canvas.layers.size() - 1; n >= 0; n--)
         {
             Layer& layer = canvas.layers[n];
-
             if (layer.is_deleted)
                 continue;
 
@@ -308,10 +313,8 @@ i32 main()
             // duplicates the layer and puts it on top of the original layer
             if (ImGui::Button("D"))
             {
-                Layer duplicate(layer);
+                Layer duplicate((const Layer&)layer);
                 strncpy(duplicate.name, canvas.default_layer_name(), LAYER_NAME_MAX_LENGTH - 1);
-                duplicate.name[LAYER_NAME_MAX_LENGTH - 1] = '\0';
-
                 canvas.layers.insert(canvas.layers.begin() + n + 1, duplicate);
             }
             ImGui::SameLine();
@@ -319,13 +322,17 @@ i32 main()
             // "deletes" the layer
             if (ImGui::Button("X"))
             {
-                layer.is_deleted = true;
+                if (canvas.current_layer_index == n)
+                    canvas.current_layer_index = -1;
+                else if (canvas.current_layer_index > n)
+                    canvas.current_layer_index--;
+                layer.is_deleted = true; // maybe add a button that deletes all the layers that are marked as deleted, so user can free the memory
             }
             ImGui::SameLine();
             
             // shows the current layer and allows it to be selected
-            if (ImGui::Selectable(layer.name, canvas.current_layer == &layer))
-                canvas.current_layer = &layer;
+            if (ImGui::Selectable(layer.name, canvas.current_layer_index == n))
+                canvas.current_layer_index = n;
 
             // drag and drop functionality
             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
@@ -346,6 +353,14 @@ i32 main()
                         Layer moved_layer = std::move(canvas.layers[payload_n]);
                         canvas.layers.erase(canvas.layers.begin() + payload_n);
                         canvas.layers.insert(canvas.layers.begin() + n, std::move(moved_layer));
+
+                        // update current layer index after the move
+                        if (canvas.current_layer_index == payload_n)
+                            canvas.current_layer_index = n;
+                        else if (canvas.current_layer_index > payload_n && canvas.current_layer_index <= n)
+                            canvas.current_layer_index--;
+                        else if (canvas.current_layer_index < payload_n && canvas.current_layer_index >= n)
+                            canvas.current_layer_index++;
                     }
                 }
                 ImGui::EndDragDropTarget();
@@ -374,7 +389,6 @@ i32 main()
                         (canvas.window_size - canvas.size) / 2,
                         img, Layer::RASTER, Layer::NORMAL
                     );
-                    canvas.current_layer = nullptr;
                 }
                 else
                 {
@@ -444,6 +458,7 @@ i32 main()
             ImGui::DragInt("Size", &tools.brush_size, 1, 1, 2000, "%dpx");
             // ImGui::SliderFloat("Hardness", &tools.brush_hardness, 0.f, 100.f, "%.1f%%");
             ImGui::SliderFloat("Opacity", &tools.brush_opacity, 0.f, 100.f, "%.1f%%");
+            ImGui::Checkbox("Anti-aliasing", &tools.brush_anti_aliasing);
         }
         else if (tools.current_tool == Tools::ERASER)
         {
@@ -451,11 +466,15 @@ i32 main()
             ImGui::DragInt("Size", &tools.eraser_size, 1, 1, 2000, "%dpx");
             // ImGui::SliderFloat("Hardness", &tools.eraser_hardness, 0.f, 100.f, "%.1f%%");
             ImGui::SliderFloat("Opacity", &tools.eraser_opacity, 0.f, 100.f, "%.1f%%");
+            ImGui::Checkbox("Anti-aliasing", &tools.eraser_anti_aliasing);
         }
         else if (tools.current_tool == Tools::FILL)
         {
             ImGui::SeparatorText("Fill Settings");
-            ImGui::SliderFloat("Tolerance", &tools.fill_tolerance, 0.f, 100.f, "%.1f%%");
+            ImGui::SliderFloat("Tolerance", &tools.fill_tolerance, 0.f, 255.f, "%.0f");
+            ImGui::SliderFloat("Opacity", &tools.fill_opacity, 0.f, 100.f, "%.1f%%");
+            // ImGui::Checkbox("Anti-aliasing", &tools.fill_anti_aliasing);
+            ImGui::Checkbox("Contiguous", &tools.fill_contiguous);
         }
         ImGui::End();
 
@@ -463,9 +482,9 @@ i32 main()
         if (canvas.initialized && vars.canvas_focused) tools.use_current_tool[tools.current_tool](tools);
 
         //................................................. OTHER GUI STUFF LIKE MENU BAR AND DIALOGS .................................................
-        if (vars.show_menu_bar) gui::show_menu_bar(vars);
-        if (vars.show_open_img_dialog) gui::show_open_dialog(vars);
-        if (vars.show_saveas_img_dialog) gui::show_saveas_dialog(vars);
+        if (vars.show_menu_bar) gui::menu_bar(vars, filters);
+        if (vars.show_open_img_dialog) gui::open_dialog(vars);
+        if (vars.show_saveas_img_dialog) gui::saveas_dialog(vars);
 
         //................................................. NEW IMAGE .................................................
         if (vars.show_new_img_dialog)
@@ -531,7 +550,7 @@ i32 main()
                             (canvas.window_size - canvas.size) / 2,
                             img, Layer::RASTER, Layer::NORMAL
                         );
-                        canvas.current_layer = nullptr; // &canvas.layers.back();
+                        canvas.current_layer_index = canvas.layers.size() - 1;
                     }
                     else
                     {
@@ -579,7 +598,7 @@ i32 main()
                     img_pos,
                     img, Layer::RASTER, Layer::NORMAL
                 );
-                canvas.current_layer = nullptr; // &canvas.layers.back();
+                canvas.current_layer_index = canvas.layers.size() - 1;
             }
             else
                 delete img;
@@ -599,20 +618,6 @@ i32 main()
                 std::cout << "Saving image to: " << vars.save_path << std::endl;
             }
             vars.save_image = false;
-        }
-
-        //................................................. FILTERS .................................................
-        if (vars.apply_gray_scale)
-        {
-            if (canvas.layers.empty())
-            {
-                std::cout << "there is no image to grayscale...\n";
-            }
-            else
-            {
-                std::cout << "sike, you thought!\n";
-            }
-            vars.apply_gray_scale = false;
         }
 
         //................................................. CANVAS NAVIGATION .................................................
@@ -649,7 +654,7 @@ i32 main()
         //................................................. DEBUG WINDOW .................................................
 #if DEBUG == 1 // this is for debugging only
         // display the current pressed keys as they are pressed or released
-        ImGui::Begin("Debug");
+        ImGui::Begin("Debug Information");
         std::string keys_pressed = "Keys pressed: ";
         for (auto key : currently_pressed_keys)
         {
@@ -662,6 +667,7 @@ i32 main()
         ImGui::Text("Canvas window size: (%.1f, %.1f)", canvas.window_size.x, canvas.window_size.y);
         ImGui::Text("Canvas texture size: (%i, %i)", canvas.window_texture.getSize().x , canvas.window_texture.getSize().y);
         ImGui::Text("Canvas size: (%.1f, %.1f)", canvas.size.x, canvas.size.y);
+        ImGui::Text("Canvas start position: (%.1f, %.1f)", canvas.start_pos.x, canvas.start_pos.y);
         ImGui::Text("Canvas zoom factor: %f", canvas.zoom_factor);
         ImGui::Text("Canvas relative zoom factor: %f", canvas.relative_zoom_factor);
         ImGui::Text("Canvas view center: (%.1f, %.1f)", canvas.view_center.x, canvas.view_center.y);
@@ -672,6 +678,10 @@ i32 main()
         ImGui::Text("Mouse canvas world position: (%.1f, %.1f)", canvas.mouse_p.x, canvas.mouse_p.y);
         ImGui::Text("Mouse left held: %i", vars.mouse_l_held);
         ImGui::Text("Mouse right held: %i", vars.mouse_r_held);
+        ImGui::Separator();
+        ImGui::Text("Current layer index: %i", canvas.current_layer_index);
+        Layer* l = canvas.current_layer();
+        ImGui::Text("Current layer name: %s", l ? l->name : "*NULL*");
         ImGui::End();
 #endif
 

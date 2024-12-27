@@ -227,3 +227,21 @@ std::ostream& operator<< (std::ostream& os, const vec2t<T> vec)
 typedef vec2t<float> vec2;  // this should be used for more accurate mathematical operations
 typedef vec2t<i32> vec2i;
 typedef vec2t<ui32> vec2ui;
+
+//..................................................................................................
+struct vec2i_hash
+{
+    std::size_t operator()(const vec2i& v) const noexcept
+    {
+        return std::hash<int>()(v.x) ^ (std::hash<int>()(v.y) << 1);
+    }
+};
+
+//..................................................................................................
+struct vec2i_equal
+{
+    bool operator()(const vec2i& lhs, const vec2i& rhs) const noexcept
+    {
+        return lhs.x == lhs.x && lhs.y == lhs.y;
+    }
+};

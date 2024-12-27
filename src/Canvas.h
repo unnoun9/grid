@@ -11,7 +11,7 @@ struct Tools;
 struct Canvas
 {
     std::vector<Layer> layers;                      // for now this, but later maybe implement a better place to hold layers whose m_graphic can be other things too, not only raster
-    Layer* current_layer = NULL;                    // the layer that is currently selected through the layers panel; maybe use an i32 index for this instead of pointer, since std::vector<Layer> will potentially move its layers when new layers are added
+    i32 current_layer_index = -1;                   // the layer's index that is currently selected through the layers panel
     sf::RenderTexture window_texture;               // the place where everything will ultimately be drawn; replaces RenderWindow
     sf::RenderTexture texture;                      // a texture that simulates the canvas; this is the actual place where stuff if present
     bool initialized = false;                       // represents whether or not the canvas was loaded with an image for the first time or if a new blank image was created
@@ -42,4 +42,13 @@ struct Canvas
 
     // uses zoom_level and center to zoom and pan across (effectively navigating the canvas)
     void navigate();
+
+    // just returns the current layer
+    inline Layer* current_layer()
+    {
+        if (current_layer_index >= 0 && current_layer_index < layers.size())
+            return &layers[current_layer_index];
+        return nullptr;
+    }
+
 };

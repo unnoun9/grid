@@ -88,7 +88,7 @@ void do_action(const Action& action)
     {
         if (vars.canvas_focused)
         {
-            const float percent_change = 0.02;
+            const float percent_change = 0.05;
             float change_factor = (action.ticks > 0 ? 1 - percent_change : 1 + percent_change);
             vars.canvas_zoom_factor *= change_factor;
             vars.navigate_canvas_right_now = true;

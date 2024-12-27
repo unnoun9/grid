@@ -32,6 +32,7 @@ Layer::Layer(const Layer &other)
             img->data = img_other->data;
             img->texture = img_other->texture;
             img->sprite = img_other->sprite;
+            img->sprite.setTexture(img->texture);
 
             graphic = img;
         }
@@ -89,6 +90,7 @@ Layer &Layer::operator=(const Layer &other)
                 img->data = img_other->data;
                 img->texture = img_other->texture;
                 img->sprite = img_other->sprite;
+                img->sprite.setTexture(img->texture);
 
                 graphic = img;
             }

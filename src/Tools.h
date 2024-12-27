@@ -33,19 +33,24 @@ struct Tools
     bool is_dragging = false;
 
     i32 brush_size = 20;
-    float brush_hardness = 100.f;
+    float brush_hardness = 100.f;       // not implemented yet
     float brush_opacity = 100.f;
+    bool brush_anti_aliasing = true;    // not implemented yet
 
     i32 eraser_size = 20;
-    float eraser_hardness = 100.f;
+    float eraser_hardness = 100.f;      // not implemented yet
     float eraser_opacity = 100.f;
+    bool eraser_anti_aliasing = true;   // not implemented yet
 
-    float fill_tolerance = 30.f;  // range: 0-100, represents how much color difference is allowed
+    float fill_tolerance = 10;
+    float fill_opacity = 100.f;
+    bool fill_anti_aliasing = true;     // not implemented yet
+    bool fill_contiguous = true;
 
     Tools(Canvas*);
 };
 
-void no(Tools&);
+inline void no(Tools&) {} // literally do nothing lol
 void move(Tools&);
 void brush(Tools&);
 void eraser(Tools&);

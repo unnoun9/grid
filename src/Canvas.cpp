@@ -16,6 +16,7 @@ const char* Canvas::default_layer_name()
 {
     char* name = (char*)alloca(LAYER_NAME_MAX_LENGTH * sizeof(char));
     sprintf(name, "layer %d", layers.size() + 1);
+    name[LAYER_NAME_MAX_LENGTH - 1] = '\0';
     return name;
 }
 
@@ -99,6 +100,11 @@ void Canvas::draw()
     }
 
     // draw layers with their blend modes
+    auto is_visible_in_view = [](const sf::FloatRect& bounds, const sf::View& view) -> bool
+    {
+        sf::FloatRect viewport = view.getViewport();
+        return bounds.intersects(viewport);
+    };
     auto has_visible_layers_beneath = [](i32 index, const std::vector<Layer>& layers) -> bool // returns true if there is a layer beneath the given layer that is visible
     {
         for (i32 i = index - 1; i >= 0; i--)

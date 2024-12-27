@@ -33,8 +33,16 @@ FragShader  Saturation      shaders/blend-modes/saturation.frag
 FragShader  Color           shaders/blend-modes/color.frag
 FragShader  Luminosity      shaders/blend-modes/luminosity.frag
 
-FragShader  GrayScale       shaders/filters/grayscale.frag
-FragShader  Contrast        shaders/filters/grayscale.frag
-FragShader  Invert          shaders/filters/grayscale.frag
-FragShader  Brightness      shaders/filters/grayscale.frag
-FragShader  Sepia           shaders/filters/grayscale.frag
+FragShader  Brightness              shaders/filters/brightness.frag
+FragShader  Contrast                shaders/filters/contrast.frag
+FragShader  GrayScale               shaders/filters/grayscale.frag
+FragShader  Invert                  shaders/filters/invert.frag
+FragShader  Sepia                   shaders/filters/sepia.frag
+FragShader  BoxBlurHorizontal       shaders/filters/box_blur_hor.frag
+FragShader  BoxBlurVertical         shaders/filters/box_blur_vert.frag
+FragShader  GaussianBlurHorizontal  shaders/filters/gaussian_blur_hor.frag
+FragShader  GaussianBlurVertical    shaders/filters/gaussian_blur_vert.frag
+
+*FragShader  Pixelate                shaders/filters/pixelate.frag
+*FragShader  EdgeDetection           shaders/filters/edge_detection.frag
+*FragShader  Sharpen                 shaders/filters/sharpen.frag

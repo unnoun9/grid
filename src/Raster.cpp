@@ -8,7 +8,7 @@ Raster::Raster()
 }
 
 //..................................................................................................
-bool Raster::update_texture()
+bool Raster::update_texture(bool reset_rect)
 {
     if (texture.getSize() != data.getSize() && !texture.create(data.getSize().x, data.getSize().y))
     {
@@ -16,7 +16,7 @@ bool Raster::update_texture()
         return false;
     }
     texture.loadFromImage(data);
-    sprite.setTexture(texture, true);
+    sprite.setTexture(texture, reset_rect);
     return true;
 }
 

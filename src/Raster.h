@@ -9,6 +9,6 @@ struct Raster
     sf::Sprite sprite;
 
     Raster();
-    bool update_texture();
+    bool update_texture(bool reset_rect = true);
     bool loadfromfile(const std::string& path);
 };
