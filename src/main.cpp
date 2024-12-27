@@ -263,24 +263,9 @@ i32 main()
         ImGui::PopStyleVar();
 
         // for now, this is just to debug mouse position relative to the canvas
-        sf::CircleShape circ(5 * canvas.zoom_factor, 128);
-        circ.setFillColor(sf::Color(207, 207, 196, 75));
-        circ.setOutlineColor(sf::Color(196, 196, 207, 175));
-        circ.setOutlineThickness(1 * canvas.zoom_factor);
-        circ.setPosition(canvas.mouse_p - vec2(circ.getRadius(), circ.getRadius()));
-        canvas.window_texture.draw(circ);
+        
         // color selection tool cursor ;-;
-        if (tools.current_tool == Tools::COLOR_SELECTION)
-        {
-            sf::Sprite cursor_sprite(assets.get_texture("6ColorSelectionTool"));
-            float scale = 20 * canvas.zoom_factor / cursor_sprite.getTexture()->getSize().x;
-            cursor_sprite.setScale(scale, scale);
-            cursor_sprite.setOrigin(cursor_sprite.getTexture()->getSize().x / 2.0f, cursor_sprite.getTexture()->getSize().y / 2.0f);
-            cursor_sprite.setPosition(canvas.mouse_p.x + circ.getRadius() * 2 + 10 * canvas.zoom_factor, 
-                                           canvas.mouse_p.y - circ.getRadius() * 4);
-            canvas.window_texture.draw(cursor_sprite);
-        }
-        canvas.window_texture.display();
+        
 
         //................................................. THE LAYERS PANEL .................................................
         ImGui::Begin("Layers");
@@ -650,6 +635,25 @@ i32 main()
             vars.canvas_zoom_factor = 1;
             vars.pan_delta *= canvas.initialized;
         }
+
+        sf::CircleShape circ(5 * canvas.zoom_factor, 128);
+        circ.setFillColor(sf::Color(207, 207, 196, 75));
+        circ.setOutlineColor(sf::Color(196, 196, 207, 175));
+        circ.setOutlineThickness(1 * canvas.zoom_factor);
+        circ.setPosition(canvas.mouse_p - vec2(circ.getRadius(), circ.getRadius()));
+        canvas.window_texture.draw(circ);
+
+        if (tools.current_tool == Tools::COLOR_SELECTION)
+        {
+            sf::Sprite cursor_sprite(assets.get_texture("6ColorSelectionTool"));
+            float scale = 20 * canvas.zoom_factor / cursor_sprite.getTexture()->getSize().x;
+            cursor_sprite.setScale(scale, scale);
+            cursor_sprite.setOrigin(cursor_sprite.getTexture()->getSize().x / 2.0f, cursor_sprite.getTexture()->getSize().y / 2.0f);
+            cursor_sprite.setPosition(canvas.mouse_p.x + circ.getRadius() * 2 + 10 * canvas.zoom_factor, 
+                                           canvas.mouse_p.y - circ.getRadius() * 4);
+            canvas.window_texture.draw(cursor_sprite);
+        }
+        canvas.window_texture.display();
 
         //................................................. DEBUG WINDOW .................................................
 #if DEBUG == 1 // this is for debugging only

@@ -512,21 +512,36 @@ sf::Image create_mask(Raster* raster, const sf::Color& target_color, float thres
     return mask;
 }
 
-void apply_mask_and_modify_image(Raster* raster, const sf::Image& mask)
+void apply_mask_and_modify_image(Tools& t, const sf::Image& mask, const sf::Color& fill_color)
 {
-    sf::Image& image_data = raster->data;
+    Layer* current_layer = t.canvas->current_layer();
+    if (!current_layer || current_layer->type != Layer::RASTER)
+        return;
 
-    for (unsigned y = 0; y < mask.getSize().y; ++y)
+    Raster* raster = (Raster*)current_layer->graphic;
+    vec2 layer_size = raster->data.getSize();
+
+    for (unsigned y = 0; y < layer_size.y; ++y)
     {
-        for (unsigned x = 0; x < mask.getSize().x; ++x)
+        for (unsigned x = 0; x < layer_size.x; ++x)
         {
-            if (mask.getPixel(x, y) == sf::Color::White)
-            {                                                            
-                image_data.setPixel(x, y, sf::Color::White);                        // changing the selected pixels in the image to white
+            // Get the mask's alpha value at (x, y)
+            sf::Color mask_color = mask.getPixel(x, y);
+            if (mask_color.a > 0)                                                         // If pixel is selected in the mask
+            {
+                sf::Color pixel_color = raster->data.getPixel(x, y);
+                float alpha = mask_color.a / 255.0f;                                     // mask's alpha is used as a blending factor
+                sf::Color blended_color = util::blend_colors(fill_color, pixel_color, alpha);
+
+                // Applying the new color to the raster
+                raster->data.setPixel(x, y, blended_color);
             }
         }
     }
+
+    raster->update_texture(); 
 }
+
 
 void select_by_color(Tools& t)
 {
@@ -541,7 +556,7 @@ void select_by_color(Tools& t)
         return; 
 
     sf::FloatRect bounds(t.canvas->start_pos, t.canvas->size);
-    const float color_threshold = 0.05f;                                                 // threshold for strictness of color match
+    const float color_threshold = 0.09f;                                                 // threshold for strictness of color match
 
     if (vars.mouse_l_held && bounds.contains(t.canvas->mouse_p)) 
     {
@@ -564,8 +579,20 @@ void select_by_color(Tools& t)
         sf::Color target_color = compute_average_color(raster, mouse_pos);               // taking the average color of the selected area
 
         sf::Image mask = create_mask(raster, target_color, color_threshold);             // creating a mask
+        sf::Color fill_color = (t.canvas->current_color == 0)
+        ? sf::Color(
+              (i32)(t.canvas->primary_color.x * 255),
+              (i32)(t.canvas->primary_color.y * 255),
+              (i32)(t.canvas->primary_color.z * 255))
+        : sf::Color(
+              (i32)(t.canvas->secondary_color.x * 255),
+              (i32)(t.canvas->secondary_color.y * 255),
+              (i32)(t.canvas->secondary_color.z * 255));
 
-        apply_mask_and_modify_image(raster, mask);                                       // for now, i am making the selected pixels white
+        apply_mask_and_modify_image(t, mask, fill_color);
+                                                                                        // the selected pixels are now filled with the fill color
+
+        raster->update_texture();
     }
 
     Raster* raster = (Raster*)current_layer->graphic;
