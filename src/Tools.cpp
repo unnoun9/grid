@@ -5,7 +5,6 @@
 #include "Undo_Redo.h"
 
 extern Variables vars;
-extern Undo_Redo undo_redo;
 
 //..................................................................................................
 //..................................................................................................
@@ -32,27 +31,27 @@ void move(Tools& t)
         layer_size = ((Raster*)current_layer->graphic)->texture.getSize();
     else;
 
-    static vec2* prev_pos = nullptr;
+    // static vec2* prev_pos = nullptr;
 
     // when drag starts, store the previous position
-    if (t.is_dragging && !prev_pos)
-    {
-        prev_pos = new vec2(current_layer->pos);
-    }
+    // if (t.is_dragging && !prev_pos)
+    // {
+    //     prev_pos = new vec2(current_layer->pos);
+    // }
     
     if (t.is_dragging)
     {
         current_layer->pos = t.canvas->mouse_p - t.layer_offset;
     }
-    else if (prev_pos)
-    {
-        // if drag ends, add the move action to the undo stack
-        undo_redo.undostack.push_back(Edit(Edit::MOVE, t.canvas->current_layer_index, (vec2*)new vec2(*prev_pos)));
-        undo_redo.redostack.clear();
+    // else if (prev_pos)
+    // {
+    //     // if drag ends, add the move action to the undo stack
+    //     undo_redo.undostack.push_back(Edit(Edit::MOVE, t.canvas->current_layer_index, (vec2*)new vec2(*prev_pos)));
+    //     undo_redo.redostack.clear();
 
-        delete prev_pos;
-        prev_pos = nullptr;
-    }
+    //     delete prev_pos;
+    //     prev_pos = nullptr;
+    // }
 
     sf::FloatRect bounds(current_layer->pos, layer_size);
     if (bounds.contains(t.canvas->mouse_p))
@@ -346,8 +345,8 @@ void fill(Tools& t)
             }
         }
 
-        undo_redo.undostack.push_back({ Edit::FILL, t.canvas->current_layer_index, new sf::Texture(raster->texture) });
-        undo_redo.redostack.clear();
+        // undo_redo.undostack.push_back({ Edit::FILL, t.canvas->current_layer_index, new sf::Texture(raster->texture) });
+        // undo_redo.redostack.clear();
         raster->texture.update(raster_img);
     }
 }

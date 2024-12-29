@@ -3,8 +3,6 @@
 #include "Filters.h"
 #include "Undo_Redo.h"
 
-extern Undo_Redo undo_redo;
-
 // ..................................................................................................
 Filters::Filters(Canvas *canv)
     : canv(canv)
@@ -61,8 +59,6 @@ void Filters::apply_filter(const std::string& filter)
         target.draw(intermediate_sprite, &vertical_shader);
         target.display();
 
-        undo_redo.undostack.push_back({ Edit::Type::BOX_BLUR, canv->current_layer_index, new sf::Texture(raster->texture) });
-        undo_redo.redostack.clear();
         raster->texture = target.getTexture();
         raster->sprite.setTexture(raster->texture);
         return;
@@ -94,8 +90,6 @@ void Filters::apply_filter(const std::string& filter)
         target.draw(intermediate_sprite, &vertical_shader);
         target.display();
 
-        undo_redo.undostack.push_back({ Edit::Type::GAUSSIAN_BLUR, canv->current_layer_index, new sf::Texture(raster->texture) });
-        undo_redo.redostack.clear();
         raster->texture = target.getTexture();
         raster->sprite.setTexture(raster->texture);
         return;
@@ -109,8 +103,6 @@ void Filters::apply_filter(const std::string& filter)
         target.draw(raster->sprite, &edge_shader);
         target.display();
 
-        undo_redo.undostack.push_back({ Edit::Type::EDGE_DETECT, canv->current_layer_index, new sf::Texture(raster->texture) });
-        undo_redo.redostack.clear();
         raster->texture = target.getTexture();
         raster->sprite.setTexture(raster->texture);
         return;
@@ -124,8 +116,6 @@ void Filters::apply_filter(const std::string& filter)
         target.draw(raster->sprite, &flipx_shader);
         target.display();
 
-        undo_redo.undostack.push_back({ Edit::Type::FLIPX, canv->current_layer_index, nullptr });
-        undo_redo.redostack.clear();
         raster->texture = target.getTexture();
         raster->sprite.setTexture(raster->texture);
         return;
@@ -139,8 +129,6 @@ void Filters::apply_filter(const std::string& filter)
         target.draw(raster->sprite, &flipy_shader);
         target.display();
 
-        undo_redo.undostack.push_back({ Edit::Type::FLIPY, canv->current_layer_index, nullptr });
-        undo_redo.redostack.clear();
         raster->texture = target.getTexture();
         raster->sprite.setTexture(raster->texture);
         return;
@@ -163,15 +151,6 @@ void Filters::apply_filter(const std::string& filter)
         target.draw(raster->sprite, &rotate_shader);
         target.display();
 
-        Edit::Type edit_type = Edit::Type::NONE;
-        if (filter == "Rotate")
-            edit_type = Edit::Type::ROTATE;
-        else if (filter == "RotateCW")
-            edit_type = Edit::Type::ROTATECW;
-        else if (filter == "RotateCCW")
-            edit_type = Edit::Type::ROTATECCW;
-        undo_redo.undostack.push_back({ edit_type, canv->current_layer_index, new int(rotate_angle) });
-        undo_redo.redostack.clear();
         raster->texture = target.getTexture();
         raster->sprite.setTexture(raster->texture);
         return;
@@ -182,19 +161,6 @@ void Filters::apply_filter(const std::string& filter)
     target.clear(sf::Color::Transparent);
     target.draw(raster->sprite, &filter_shader);
     target.display();
-    Edit::Type edit_type = Edit::Type::NONE;
-    if (filter == "Brightness")
-        edit_type = Edit::Type::BRIGHTNESS;
-    else if (filter == "Contrast")
-        edit_type = Edit::Type::CONTRAST;
-    else if (filter == "Grayscale")
-        edit_type = Edit::Type::GRAYSCALE;
-    else if (filter == "Invert")
-        edit_type = Edit::Type::INVERT;
-    else if (filter == "Sepia")
-        edit_type = Edit::Type::SEPIA;
-    undo_redo.undostack.push_back({ edit_type, canv->current_layer_index, new sf::Texture(raster->texture) });
-    undo_redo.redostack.clear();
     raster->texture = target.getTexture();
     raster->sprite.setTexture(raster->texture);
 }

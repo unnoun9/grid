@@ -45,7 +45,7 @@ std::ostream& operator<<(std::ostream& os, const Action& action)
 extern std::map<std::list<int>, std::string> action_map;
 extern Variables vars;
 extern sf::RenderWindow& window;
-extern Undo_Redo undo_redo;
+// extern Undo_Redo undo_redo;
 
 //..................................................................................................
 // puts an action in the action map
@@ -131,11 +131,11 @@ void do_action(const Action& action)
         }
         else if (action.name == "undo")
         {
-            undo_redo.undo();
+            // undo_redo.undo();
         }
         else if (action.name == "redo")
         {
-            undo_redo.redo();
+            // undo_redo.redo();
         }
         else if (action.name == "reset_canvas_navigation")
         {

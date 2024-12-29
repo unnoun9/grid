@@ -24,7 +24,7 @@ std::list<i32> currently_pressed_keys;              // to track the current shor
 Variables vars;                                     // variables that imgui and actions use and change
 bool shaders_available = true;                      // tracks whether shaders are available in the machine
 extern const char* layer_types_str[];               // see Layer.h
-Undo_Redo undo_redo;                                // the undo redo system
+// Undo_Redo undo_redo;                                // the undo redo system
 
 //................................................. SOME USEFUL FUNCS .................................................
 // draws a line from point p1 to point p2 of the specified color in the window
@@ -89,7 +89,7 @@ i32 main()
 
     // the one and the only, canvas!
     Canvas canvas(vec2(window.getSize().x * 0.7, window.getSize().y * 0.85));
-    undo_redo.canv = &canvas;
+    // undo_redo.canv = &canvas;
 
     // da tools
     Tools tools(&canvas);
@@ -322,16 +322,16 @@ i32 main()
                 strncpy(duplicate.name, canvas.default_layer_name(), LAYER_NAME_MAX_LENGTH - 1);
                 canvas.layers.insert(canvas.layers.begin() + n + 1, duplicate);
 
-                undo_redo.undostack.push_back(Edit(Edit::LAYER_ADD, n + 1, nullptr));
-                undo_redo.redostack.clear();
+                // undo_redo.undostack.push_back(Edit(Edit::LAYER_ADD, n + 1, nullptr));
+                // undo_redo.redostack.clear();
             }
             ImGui::SameLine();
 
             // "deletes" the layer
             if (ImGui::Button("X"))
             {
-                undo_redo.undostack.push_back(Edit(Edit::LAYER_REMOVE, n, new Layer(layer)));
-                undo_redo.redostack.clear();
+                // undo_redo.undostack.push_back(Edit(Edit::LAYER_REMOVE, n, new Layer(layer)));
+                // undo_redo.redostack.clear();
 
                 if (canvas.current_layer_index == n)
                     canvas.current_layer_index = -1;
@@ -401,8 +401,8 @@ i32 main()
                     raster, Layer::RASTER, Layer::NORMAL
                 );
 
-                undo_redo.undostack.push_back({ Edit::LAYER_ADD, (i32)canvas.layers.size() - 1, nullptr });
-                undo_redo.redostack.clear();
+                // undo_redo.undostack.push_back({ Edit::LAYER_ADD, (i32)canvas.layers.size() - 1, nullptr });
+                // undo_redo.redostack.clear();
             }
         }
         ImGui::End();
