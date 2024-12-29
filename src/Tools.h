@@ -8,7 +8,7 @@ struct Tools
 {
     enum Type
     {
-        NO = 0, MOVE, BRUSH, ERASER, FILL, COLOR_SELECTION,
+        NO = 0, MOVE, BRUSH, ERASER, FILL,
         NUM_TOOLS
     };
 
@@ -32,20 +32,20 @@ struct Tools
     vec2 layer_offset;
     bool is_dragging = false;
 
-    i32 brush_size = 20;
-    float brush_hardness = 100.f;       // not implemented yet
+    i32 brush_size = 50;
+    float brush_hardness = 80.f;
     float brush_opacity = 100.f;
     bool brush_anti_aliasing = true;    // not implemented yet
 
-    i32 eraser_size = 20;
-    float eraser_hardness = 100.f;      // not implemented yet
+    i32 eraser_size = 50;
+    float eraser_hardness = 80.f;
     float eraser_opacity = 100.f;
     bool eraser_anti_aliasing = true;   // not implemented yet
 
     float fill_tolerance = 10;
     float fill_opacity = 100.f;
-    bool fill_anti_aliasing = true;     // not implemented yet
     bool fill_contiguous = true;
+    bool fill_anti_aliasing = true;     // not implemented yet
 
     Tools(Canvas*);
 };
@@ -55,4 +55,3 @@ void move(Tools&);
 void brush(Tools&);
 void eraser(Tools&);
 void fill(Tools&);
-void select_by_color(Tools&);

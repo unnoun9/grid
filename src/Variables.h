@@ -36,4 +36,7 @@ struct Variables
 
     // filters-related
     bool apply_gray_scale = false;
-}; 
+
+    // timing-related
+    float delta_time = 0.0f;  // Time between frames in seconds
+};

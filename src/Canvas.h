@@ -40,6 +40,9 @@ struct Canvas
     // just simply returns "layer X" where X is number of layers for the sake of convenience 
     const char* default_layer_name();
 
+    // removes layers that are marked as deleted
+    void remove_deleted_layers();
+
     // uses zoom_level and center to zoom and pan across (effectively navigating the canvas)
     void navigate();
 

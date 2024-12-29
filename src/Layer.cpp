@@ -26,15 +26,14 @@ Layer::Layer(const Layer &other)
     {
         if (type == RASTER)
         {
-            Raster* img = new Raster();
-            Raster* img_other = (Raster*)other.graphic;
+            Raster* raster = new Raster();
+            Raster* raster_other = (Raster*)other.graphic;
 
-            img->data = img_other->data;
-            img->texture = img_other->texture;
-            img->sprite = img_other->sprite;
-            img->sprite.setTexture(img->texture);
+            raster->texture = raster_other->texture;
+            raster->sprite = raster_other->sprite;
+            raster->sprite.setTexture(raster->texture);
 
-            graphic = img;
+            graphic = raster;
         }
     }
     else
@@ -48,7 +47,7 @@ Layer::Layer(const Layer &other)
 }
 
 //..................................................................................................
-Layer::Layer(Layer && other) noexcept
+Layer::Layer(Layer&& other) noexcept
     : type(other.type)
     , pos(other.pos)
     , opacity(other.opacity)
@@ -63,7 +62,7 @@ Layer::Layer(Layer && other) noexcept
 }
 
 //..................................................................................................
-Layer &Layer::operator=(const Layer &other)
+Layer& Layer::operator=(const Layer &other)
 {
     if (this != &other)
     {
@@ -84,15 +83,14 @@ Layer &Layer::operator=(const Layer &other)
         {
             if (type == RASTER)
             {
-                Raster* img = new Raster();
-                Raster* img_other = (Raster*)other.graphic;
+                Raster* raster = new Raster();
+                Raster* raster_other = (Raster*)other.graphic;
 
-                img->data = img_other->data;
-                img->texture = img_other->texture;
-                img->sprite = img_other->sprite;
-                img->sprite.setTexture(img->texture);
+                raster->texture = raster_other->texture;
+                raster->sprite = raster_other->sprite;
+                raster->sprite.setTexture(raster->texture);
 
-                graphic = img;
+                graphic = raster;
             }
         }
         else
@@ -109,7 +107,7 @@ Layer &Layer::operator=(const Layer &other)
 }
 
 //..................................................................................................
-Layer& Layer::operator=(Layer && other) noexcept
+Layer& Layer::operator=(Layer&& other) noexcept
 {
     if (this != &other)
     {

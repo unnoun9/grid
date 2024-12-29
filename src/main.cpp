@@ -13,6 +13,7 @@
 #include "Assets.h"
 #include "Tools.h"
 #include "Filters.h"
+#include "Undo_Redo.h"
 
 //................................................. MACROS .................................................
 #define DEBUG 1 // macro to enable or disable custom debugging
@@ -23,6 +24,7 @@ std::list<i32> currently_pressed_keys;              // to track the current shor
 Variables vars;                                     // variables that imgui and actions use and change
 bool shaders_available = true;                      // tracks whether shaders are available in the machine
 extern const char* layer_types_str[];               // see Layer.h
+Undo_Redo undo_redo;                                // the undo redo system
 
 //................................................. SOME USEFUL FUNCS .................................................
 // draws a line from point p1 to point p2 of the specified color in the window
@@ -46,8 +48,9 @@ void quit(bool& running, sf::RenderWindow& window)
 i32 main()
 {
     //................................................. INITIALIZATION .................................................
-    sf::RenderWindow window(sf::VideoMode(1800, 1000), "Grid", sf::Style::Default);
+    sf::RenderWindow window(sf::VideoMode(1500, 900), "Grid", sf::Style::Default);
     window.setKeyRepeatEnabled(false);
+    window.setFramerateLimit(60);
     sf::Clock delta_clock;
     bool running = true;
     ui64 frames = 0;
@@ -86,16 +89,16 @@ i32 main()
 
     // the one and the only, canvas!
     Canvas canvas(vec2(window.getSize().x * 0.7, window.getSize().y * 0.85));
+    undo_redo.canv = &canvas;
 
     // da tools
     Tools tools(&canvas);
     const char* tools_tooltips[Tools::NUM_TOOLS] = {    // used by imgui tooltips
-        "No tool. Literally no tool is selected at all..",
-        "Move tool. Moves layers using the mouse input.",
-        "Brush tool. The typical paint brush tool that can paint over layers, given its settings.",
-        "Eraser tool. Erases contents of a layer.",
-        "Fill tool. Flood fills a color onto a valid region of a layer.",
-        "Color selection tool. Selects a region based on the color clicked."
+        "No tool. Literally no tool is selected at all.. (N)",
+        "Move tool. Moves layers using the mouse input. (V)",
+        "Brush tool. The typical paint brush tool that can paint over layers, given its settings. (B)",
+        "Eraser tool. Erases contents of a layer. (E)",
+        "Fill tool. Flood fills a color onto a valid region of a layer. (G)",
     };
     canvas.assets = &assets;
     canvas.tools = &tools;
@@ -103,9 +106,17 @@ i32 main()
     // da filters
     Filters filters(&canvas);
 
+    // cursor
+    sf::CircleShape circ(5 * canvas.zoom_factor, 128);
+    circ.setFillColor(sf::Color(207, 207, 196, 75));
+    circ.setOutlineColor(sf::Color(196, 196, 207, 175));
+
     //................................................. MAIN LOOP .................................................
     while (running && window.isOpen())
     {
+        // Update delta time at the start of each frame
+        vars.delta_time = delta_clock.restart().asSeconds();
+
         //................................................. EVENT HANDLING .................................................
         sf::Event event;
         while (window.pollEvent(event))
@@ -131,13 +142,11 @@ i32 main()
             // main keyboard events below
             if (event.type == sf::Event::KeyPressed)
             {
-                // will probably remove this when done; this is just a convenient way to exit the application
                 if (event.key.code == sf::Keyboard::Escape)
                 {
                     if (vars.show_new_img_dialog) vars.show_new_img_dialog = false;
                     else if (vars.show_open_img_dialog) vars.show_open_img_dialog = false;
                     else if (vars.show_saveas_img_dialog) vars.show_saveas_img_dialog = false;
-                    else quit(running, window);
 
                     if (ImGuiFileDialog::Instance()->IsOpened())
                         ImGuiFileDialog::Instance()->Close();
@@ -178,8 +187,7 @@ i32 main()
                         // the following is the move tool's activation logic
                         vec2 layer_size;
                         if (current_layer->type == Layer::RASTER)
-                            layer_size = ((Raster*)current_layer->graphic)->data.getSize();
-                        // handle other layer types
+                            layer_size = ((Raster*)current_layer->graphic)->texture.getSize();
                         else;
 
                         sf::FloatRect bounds(current_layer->pos, layer_size);
@@ -258,14 +266,26 @@ i32 main()
         canvas.mouse_p = vec2(abs_mouse_p.x - abs_screen_p.x, abs_mouse_p.y - abs_screen_p.y);
         canvas.mouse_p = canvas.window_texture.mapPixelToCoords((vec2i)(canvas.mouse_p));
         vars.canvas_focused = ImGui::IsItemHovered();
-        window.setMouseCursorVisible(!vars.canvas_focused);
         ImGui::End();
         ImGui::PopStyleVar();
 
-        // for now, this is just to debug mouse position relative to the canvas
-        
-        // color selection tool cursor ;-;
-        
+        // mouse cursors
+        window.setMouseCursorVisible(!vars.canvas_focused || tools.current_tool == Tools::NO); // show window cursor when not on canvas or show always when no tool is selected
+        if ((tools.current_tool == Tools::MOVE || tools.current_tool == Tools::FILL) && vars.canvas_focused)
+        {
+            circ.setRadius(7 * canvas.zoom_factor);
+            circ.setOutlineThickness(1 * canvas.zoom_factor);
+            circ.setPosition(canvas.mouse_p - vec2(circ.getRadius(), circ.getRadius()));
+            canvas.window_texture.draw(circ);
+        }
+        else if ((tools.current_tool == Tools::BRUSH || tools.current_tool == Tools::ERASER) && vars.canvas_focused)
+        {
+            circ.setRadius((tools.current_tool == Tools::BRUSH ? tools.brush_size : tools.eraser_size) / 2.f);
+            circ.setOutlineThickness(1 * canvas.zoom_factor);
+            circ.setPosition(canvas.mouse_p - vec2(circ.getRadius(), circ.getRadius()));
+            canvas.window_texture.draw(circ);
+        }
+        canvas.window_texture.display();
 
         //................................................. THE LAYERS PANEL .................................................
         ImGui::Begin("Layers");
@@ -301,12 +321,18 @@ i32 main()
                 Layer duplicate((const Layer&)layer);
                 strncpy(duplicate.name, canvas.default_layer_name(), LAYER_NAME_MAX_LENGTH - 1);
                 canvas.layers.insert(canvas.layers.begin() + n + 1, duplicate);
+
+                undo_redo.undostack.push_back(Edit(Edit::LAYER_ADD, n + 1, nullptr));
+                undo_redo.redostack.clear();
             }
             ImGui::SameLine();
 
             // "deletes" the layer
             if (ImGui::Button("X"))
             {
+                undo_redo.undostack.push_back(Edit(Edit::LAYER_REMOVE, n, new Layer(layer)));
+                undo_redo.redostack.clear();
+
                 if (canvas.current_layer_index == n)
                     canvas.current_layer_index = -1;
                 else if (canvas.current_layer_index > n)
@@ -356,6 +382,8 @@ i32 main()
             ImGui::PopID();
         }
 
+        canvas.remove_deleted_layers();
+
         // creates a new empty layer
         if (canvas.initialized)
         {
@@ -364,21 +392,17 @@ i32 main()
             ImGui::Spacing(); ImGui::Spacing(); ImGui::Spacing();
             if (ImGui::Button("Create new layer"))
             {
-                Raster* img = new Raster();
-                img->data.create(canvas.size.x, canvas.size.y, sf::Color(0, 0, 0, 0));
+                Raster* raster = new Raster();
+                raster->create_blank(canvas.size, sf::Color(255, 255, 255, 0));
 
-                if (img->update_texture())
-                {
-                    canvas.layers.emplace_back(
-                        canvas.default_layer_name(),
-                        (canvas.window_size - canvas.size) / 2,
-                        img, Layer::RASTER, Layer::NORMAL
-                    );
-                }
-                else
-                {
-                    delete img;
-                }
+                canvas.layers.emplace_back(
+                    canvas.default_layer_name(),
+                    (canvas.window_size - canvas.size) / 2,
+                    raster, Layer::RASTER, Layer::NORMAL
+                );
+
+                undo_redo.undostack.push_back({ Edit::LAYER_ADD, (i32)canvas.layers.size() - 1, nullptr });
+                undo_redo.redostack.clear();
             }
         }
         ImGui::End();
@@ -441,25 +465,25 @@ i32 main()
         {
             ImGui::SeparatorText("Brush Settings");
             ImGui::DragInt("Size", &tools.brush_size, 1, 1, 2000, "%dpx");
-            // ImGui::SliderFloat("Hardness", &tools.brush_hardness, 0.f, 100.f, "%.1f%%");
+            ImGui::SliderFloat("Hardness", &tools.brush_hardness, 0.f, 100.f, "%.1f%%");
             ImGui::SliderFloat("Opacity", &tools.brush_opacity, 0.f, 100.f, "%.1f%%");
-            ImGui::Checkbox("Anti-aliasing", &tools.brush_anti_aliasing);
+            // ImGui::Checkbox("Anti-aliasing", &tools.brush_anti_aliasing);
         }
         else if (tools.current_tool == Tools::ERASER)
         {
             ImGui::SeparatorText("Eraser Settings");
             ImGui::DragInt("Size", &tools.eraser_size, 1, 1, 2000, "%dpx");
-            // ImGui::SliderFloat("Hardness", &tools.eraser_hardness, 0.f, 100.f, "%.1f%%");
+            ImGui::SliderFloat("Hardness", &tools.eraser_hardness, 0.f, 100.f, "%.1f%%");
             ImGui::SliderFloat("Opacity", &tools.eraser_opacity, 0.f, 100.f, "%.1f%%");
-            ImGui::Checkbox("Anti-aliasing", &tools.eraser_anti_aliasing);
+            // ImGui::Checkbox("Anti-aliasing", &tools.eraser_anti_aliasing);
         }
         else if (tools.current_tool == Tools::FILL)
         {
             ImGui::SeparatorText("Fill Settings");
             ImGui::SliderFloat("Tolerance", &tools.fill_tolerance, 0.f, 255.f, "%.0f");
             ImGui::SliderFloat("Opacity", &tools.fill_opacity, 0.f, 100.f, "%.1f%%");
-            // ImGui::Checkbox("Anti-aliasing", &tools.fill_anti_aliasing);
             ImGui::Checkbox("Contiguous", &tools.fill_contiguous);
+            // ImGui::Checkbox("Anti-aliasing", &tools.fill_anti_aliasing);
         }
         ImGui::End();
 
@@ -515,32 +539,25 @@ i32 main()
                         canvas.size.x / canvas.window_size.x,
                         canvas.size.y / canvas.window_size.y
                     );
-                    canvas.relative_zoom_factor = canvas.zoom_factor = vars.canvas_zoom_factor = 2.5 * image_scale;
+                    canvas.relative_zoom_factor = canvas.zoom_factor = vars.canvas_zoom_factor = 2.3 * image_scale;
                     canvas.navigate();
                     canvas.initialized = true;
 
                     canvas.layers.clear();
-                    Raster* img = new Raster();
-                    img->data.create(width, height, sf::Color(
+                    Raster* raster = new Raster();
+                    raster->create_blank(canvas.size, sf::Color(
                         (ui8)(bg_color[0] * 255),
                         (ui8)(bg_color[1] * 255),
                         (ui8)(bg_color[2] * 255),
                         (ui8)(bg_color[3] * 255)
                     ));
 
-                    if (img->update_texture())
-                    {
-                        canvas.layers.emplace_back(
-                            "layer 1",
-                            (canvas.window_size - canvas.size) / 2,
-                            img, Layer::RASTER, Layer::NORMAL
-                        );
-                        canvas.current_layer_index = canvas.layers.size() - 1;
-                    }
-                    else
-                    {
-                        delete img;
-                    }
+                    canvas.layers.emplace_back(
+                        canvas.default_layer_name(),
+                        (canvas.window_size - canvas.size) / 2,
+                        raster, Layer::RASTER, Layer::NORMAL
+                    );
+                    canvas.current_layer_index = 0;
 
                     vars.show_new_img_dialog = false;
                     ImGui::CloseCurrentPopup();
@@ -556,10 +573,10 @@ i32 main()
         // (otherwise, maybe create a new canvas variable and push it to std::vector<Canvas>??)
         if (vars.open_image)
         {
-            Raster* img = new Raster();
-            if (img->loadfromfile(vars.open_path))
+            Raster* raster = new Raster();
+            if (raster->loadfromfile(vars.open_path, &canvas))
             {
-                vec2 img_size = img->data.getSize();
+                vec2 img_size = raster->texture.getSize();
 
                 // the first opened image defines the canvas size and other variables
                 if (canvas.initialized == false)
@@ -570,7 +587,7 @@ i32 main()
                         canvas.size.x / canvas.window_size.x,
                         canvas.size.y / canvas.window_size.y
                     );
-                    canvas.relative_zoom_factor = canvas.zoom_factor = vars.canvas_zoom_factor = 2.5 * image_scale;
+                    canvas.relative_zoom_factor = canvas.zoom_factor = vars.canvas_zoom_factor = 2.3 * image_scale;
                     canvas.navigate();
                     canvas.initialized = true;
                 }
@@ -581,12 +598,15 @@ i32 main()
                 canvas.layers.emplace_back(
                     canvas.default_layer_name(),
                     img_pos,
-                    img, Layer::RASTER, Layer::NORMAL
+                    raster, Layer::RASTER, Layer::NORMAL
                 );
                 canvas.current_layer_index = canvas.layers.size() - 1;
             }
             else
-                delete img;
+            {
+                delete raster;
+                std::cerr << "Failed to open image: " << vars.open_path << std::endl;
+            }
             vars.open_image = false;
         }
 
@@ -635,25 +655,6 @@ i32 main()
             vars.canvas_zoom_factor = 1;
             vars.pan_delta *= canvas.initialized;
         }
-
-        sf::CircleShape circ(5 * canvas.zoom_factor, 128);
-        circ.setFillColor(sf::Color(207, 207, 196, 75));
-        circ.setOutlineColor(sf::Color(196, 196, 207, 175));
-        circ.setOutlineThickness(1 * canvas.zoom_factor);
-        circ.setPosition(canvas.mouse_p - vec2(circ.getRadius(), circ.getRadius()));
-        canvas.window_texture.draw(circ);
-
-        if (tools.current_tool == Tools::COLOR_SELECTION)
-        {
-            sf::Sprite cursor_sprite(assets.get_texture("6ColorSelectionTool"));
-            float scale = 20 * canvas.zoom_factor / cursor_sprite.getTexture()->getSize().x;
-            cursor_sprite.setScale(scale, scale);
-            cursor_sprite.setOrigin(cursor_sprite.getTexture()->getSize().x / 2.0f, cursor_sprite.getTexture()->getSize().y / 2.0f);
-            cursor_sprite.setPosition(canvas.mouse_p.x + circ.getRadius() * 2 + 10 * canvas.zoom_factor, 
-                                           canvas.mouse_p.y - circ.getRadius() * 4);
-            canvas.window_texture.draw(cursor_sprite);
-        }
-        canvas.window_texture.display();
 
         //................................................. DEBUG WINDOW .................................................
 #if DEBUG == 1 // this is for debugging only

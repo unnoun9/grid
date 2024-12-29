@@ -27,9 +27,38 @@ void show_filter_popup(const char* popup_name, const char* slider_label, int& fi
     }
 }
 
+void show_angle_popup(const char* popup_name, const char* slider_label, int& angle, Filters& filters, const std::string& filter_name, bool& show_popup)
+{
+    if (show_popup)
+    {
+        ImGui::OpenPopup(popup_name);
+    }
+    if (ImGui::BeginPopupModal(popup_name, NULL, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        static float angle_rad = 0;
+        angle_rad = angle * 3.14159265358979323846 / 180;
+        ImGui::SliderAngle(slider_label, &angle_rad, -360, 360);
+        angle = angle_rad * 180 / 3.14159265358979323846;
+        if (ImGui::Button("Apply"))
+        {
+            filters.apply_filter(filter_name);
+            ImGui::CloseCurrentPopup();
+            show_popup = false;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel"))
+        {
+            ImGui::CloseCurrentPopup();
+            show_popup = false;
+        }
+        ImGui::EndPopup();
+    }
+}
+
 //..................................................................................................
 void gui::menu_bar(Variables& vars, Filters& filters)
 {
+    static bool show_rotate_popup = false;
     static bool show_brightness_popup = false;
     static bool show_contrast_popup = false;
     static bool show_box_blur_popup = false;
@@ -74,60 +103,82 @@ void gui::menu_bar(Variables& vars, Filters& filters)
             if (ImGui::MenuItem("Use Transparent Checker Shader", NULL, &vars.use_checker_shader));
             ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu("Filters"))
+        if (ImGui::BeginMenu("Manipulations"))
         {
-            if (ImGui::MenuItem("Brightness", NULL))
+            if (ImGui::MenuItem("Flip Horizontal"))
+            {
+                filters.apply_filter("FlipX");
+            }
+            if (ImGui::MenuItem("Flip Vertical"))
+            {
+                filters.apply_filter("FlipY");
+            }
+            if (ImGui::MenuItem("Rotate some degrees"))
+            {
+                show_rotate_popup = true;
+            }
+            if (ImGui::MenuItem("Rotate 90 degrees CW"))
+            {
+                filters.apply_filter("RotateCW");
+            }
+            if (ImGui::MenuItem("Rotate 90 degrees CCW"))
+            {
+                filters.apply_filter("RotateCCW");
+            }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Brightness"))
             {
                 show_brightness_popup = true;
             }
-            if (ImGui::MenuItem("Contrast", NULL))
+            if (ImGui::MenuItem("Contrast"))
             {
                 show_contrast_popup = true;
             }
-            if (ImGui::MenuItem("Gray Scale", NULL))
+            if (ImGui::MenuItem("Gray Scale"))
             {
                 filters.apply_filter("GrayScale");
             }
-            if (ImGui::MenuItem("Invert", NULL))
+            if (ImGui::MenuItem("Invert"))
             {
                 filters.apply_filter("Invert");
             }
-            if (ImGui::MenuItem("Sepia", NULL))
+            if (ImGui::MenuItem("Sepia"))
             {
                 filters.apply_filter("Sepia");
             }
             ImGui::Separator();
-            if (ImGui::MenuItem("Box Blur", NULL))
+            if (ImGui::MenuItem("Box Blur"))
             {
                 show_box_blur_popup = true;
             }
-            if (ImGui::MenuItem("Gaussian Blur", NULL))
+            if (ImGui::MenuItem("Gaussian Blur"))
             {
                 show_gaussian_blur_popup = true;
             }
-            // if (ImGui::MenuItem("Pixelate", NULL))
-            // {
-            //     show_pixelate_popup = true;
-            // }
-            // if (ImGui::MenuItem("Edge Detection", NULL))
-            // {
-            //     filters.apply_filter("EdgeDetection");
-            // }
-            // if (ImGui::MenuItem("Sharpen", NULL))
-            // {
-            //     filters.apply_filter("Sharpen");
-            // }
+            if (ImGui::MenuItem("Pixelate"))
+            {
+                show_pixelate_popup = true;
+            }
+            if (ImGui::MenuItem("Edge Detection"))
+            {
+                filters.apply_filter("EdgeDetection");
+            }
+            if (ImGui::MenuItem("Sharpen"))
+            {
+                filters.apply_filter("Sharpen");
+            }
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
     }
 
     // the filters settings popups / dialogs
+    show_angle_popup("Set Rotate Angle", "Rotate Angle", filters.rotate_angle, filters, "Rotate", show_rotate_popup);
     show_filter_popup("Set Brightness Strength", "Brightness Strength", filters.brightness_strength, -150, 150, filters, "Brightness", show_brightness_popup);
     show_filter_popup("Set Contrast Strength", "Contrast Strength", filters.contrast_strength, -100, 100, filters, "Contrast", show_contrast_popup);
     show_filter_popup("Set Box Blur Strength", "Box Blur Strength", filters.box_blur_strength, 1, 100, filters, "BoxBlur", show_box_blur_popup);
     show_filter_popup("Set Gaussian Blur Strength", "Gaussian Blur Strength", filters.gauss_blur_strength, 1, 100, filters, "GaussianBlur", show_gaussian_blur_popup);
-    // show_filter_popup("Set Pixelate Size", "Pixelate Size", filters.pixelate_size, 1, 100, filters, "Pixelate", show_pixelate_popup);
+    show_filter_popup("Set Pixelate Size", "Pixelate Size", filters.pixelate_size, 2, 100, filters, "Pixelate", show_pixelate_popup);
 }
 
 //..................................................................................................

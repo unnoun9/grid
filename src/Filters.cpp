@@ -1,6 +1,9 @@
 #include "util.h"
 #include "int.h"
 #include "Filters.h"
+#include "Undo_Redo.h"
+
+extern Undo_Redo undo_redo;
 
 // ..................................................................................................
 Filters::Filters(Canvas *canv)
@@ -8,6 +11,7 @@ Filters::Filters(Canvas *canv)
 {
 }
 
+// ..................................................................................................
 void Filters::apply_filter(const std::string& filter)
 {
     Layer* layer = canv->current_layer();
@@ -18,7 +22,7 @@ void Filters::apply_filter(const std::string& filter)
     vec2 layer_size = raster->texture.getSize();
 
     sf::Shader* shader = nullptr;
-    if (filter != "BoxBlur" && filter != "GaussianBlur")
+    if (filter != "BoxBlur" && filter != "GaussianBlur" && filter != "EdgeDetection" && filter != "FlipX" && filter != "FlipY" && filter != "Rotate" && filter != "RotateCW" && filter != "RotateCCW")
         shader = &canv->assets->get_shader(filter);
     sf::Shader& filter_shader = *shader;
 
@@ -28,6 +32,8 @@ void Filters::apply_filter(const std::string& filter)
         filter_shader.setUniform("brightness", brightness_strength / 255.f);
     else if (filter == "Contrast")
         filter_shader.setUniform("contrast", (float)contrast_strength);
+    else if (filter == "Pixelate")
+        filter_shader.setUniform("pixelate_size", (float)pixelate_size);
     else if (filter == "BoxBlur")
     {
         sf::Shader& horizontal_shader = canv->assets->get_shader("BoxBlurHorizontal");
@@ -40,8 +46,6 @@ void Filters::apply_filter(const std::string& filter)
         horizontal_shader.setUniform("texture", *raster->sprite.getTexture());
         horizontal_shader.setUniform("blur_size", (float)box_blur_strength);
         horizontal_shader.setUniform("texel_size", sf::Glsl::Vec2(1.f / layer_size.x, 1.f / layer_size.y));
-        horizontal_shader.setUniform("layer_pos", sf::Glsl::Vec2(layer->pos.x, layer->pos.y));
-        horizontal_shader.setUniform("canvas_size", sf::Glsl::Vec2(canv->size.x, canv->size.y));
 
         intermediate_target.clear(sf::Color::Transparent);
         intermediate_target.draw(raster->sprite, &horizontal_shader);
@@ -52,16 +56,15 @@ void Filters::apply_filter(const std::string& filter)
         vertical_shader.setUniform("texture", intermediate_target.getTexture());
         vertical_shader.setUniform("blur_size", (float)box_blur_strength);
         vertical_shader.setUniform("texel_size", sf::Glsl::Vec2(1.f / layer_size.x, 1.f / layer_size.y));
-        vertical_shader.setUniform("layer_pos", sf::Glsl::Vec2(layer->pos.x, layer->pos.y));
-        vertical_shader.setUniform("canvas_size", sf::Glsl::Vec2(canv->size.x, canv->size.y));
 
         target.clear(sf::Color::Transparent);
         target.draw(intermediate_sprite, &vertical_shader);
         target.display();
 
+        undo_redo.undostack.push_back({ Edit::Type::BOX_BLUR, canv->current_layer_index, new sf::Texture(raster->texture) });
+        undo_redo.redostack.clear();
         raster->texture = target.getTexture();
         raster->sprite.setTexture(raster->texture);
-        raster->data = raster->texture.copyToImage();
         return;
     }
     else if (filter == "GaussianBlur")
@@ -76,8 +79,6 @@ void Filters::apply_filter(const std::string& filter)
         horizontal_shader.setUniform("texture", *raster->sprite.getTexture());
         horizontal_shader.setUniform("blur_size", (float)gauss_blur_strength);
         horizontal_shader.setUniform("texel_size", sf::Glsl::Vec2(1.f / layer_size.x, 1.f / layer_size.y));
-        horizontal_shader.setUniform("layer_pos", sf::Glsl::Vec2(layer->pos.x, layer->pos.y));
-        horizontal_shader.setUniform("canvas_size", sf::Glsl::Vec2(canv->size.x, canv->size.y));
 
         intermediate_target.clear(sf::Color::Transparent);
         intermediate_target.draw(raster->sprite, &horizontal_shader);
@@ -88,106 +89,112 @@ void Filters::apply_filter(const std::string& filter)
         vertical_shader.setUniform("texture", intermediate_target.getTexture());
         vertical_shader.setUniform("blur_size", (float)gauss_blur_strength);
         vertical_shader.setUniform("texel_size", sf::Glsl::Vec2(1.f / layer_size.x, 1.f / layer_size.y));
-        vertical_shader.setUniform("layer_pos", sf::Glsl::Vec2(layer->pos.x, layer->pos.y));
-        vertical_shader.setUniform("canvas_size", sf::Glsl::Vec2(canv->size.x, canv->size.y));
 
         target.clear(sf::Color::Transparent);
         target.draw(intermediate_sprite, &vertical_shader);
         target.display();
 
+        undo_redo.undostack.push_back({ Edit::Type::GAUSSIAN_BLUR, canv->current_layer_index, new sf::Texture(raster->texture) });
+        undo_redo.redostack.clear();
         raster->texture = target.getTexture();
         raster->sprite.setTexture(raster->texture);
-        raster->data = raster->texture.copyToImage();
+        return;
+    }
+    else if (filter == "EdgeDetection")
+    {
+        sf::Shader& edge_shader = canv->assets->get_shader("EdgeDetection");
+        edge_shader.setUniform("texture", raster->texture);
+
+        target.clear(sf::Color::Transparent);
+        target.draw(raster->sprite, &edge_shader);
+        target.display();
+
+        undo_redo.undostack.push_back({ Edit::Type::EDGE_DETECT, canv->current_layer_index, new sf::Texture(raster->texture) });
+        undo_redo.redostack.clear();
+        raster->texture = target.getTexture();
+        raster->sprite.setTexture(raster->texture);
+        return;
+    }
+    else if (filter == "FlipX")
+    {
+        sf::Shader& flipx_shader = canv->assets->get_shader("FlipX");
+        flipx_shader.setUniform("texture", raster->texture);
+
+        target.clear(sf::Color::Transparent);
+        target.draw(raster->sprite, &flipx_shader);
+        target.display();
+
+        undo_redo.undostack.push_back({ Edit::Type::FLIPX, canv->current_layer_index, nullptr });
+        undo_redo.redostack.clear();
+        raster->texture = target.getTexture();
+        raster->sprite.setTexture(raster->texture);
+        return;
+    }
+    else if (filter == "FlipY")
+    {
+        sf::Shader& flipy_shader = canv->assets->get_shader("FlipY");
+        flipy_shader.setUniform("texture", raster->texture);
+
+        target.clear(sf::Color::Transparent);
+        target.draw(raster->sprite, &flipy_shader);
+        target.display();
+
+        undo_redo.undostack.push_back({ Edit::Type::FLIPY, canv->current_layer_index, nullptr });
+        undo_redo.redostack.clear();
+        raster->texture = target.getTexture();
+        raster->sprite.setTexture(raster->texture);
+        return;
+    }
+    else if (filter == "Rotate" || filter == "RotateCW" || filter == "RotateCCW")
+    {
+        sf::Shader& rotate_shader = canv->assets->get_shader("Rotate");
+        rotate_shader.setUniform("texture", raster->texture);
+
+        float angle = rotate_angle;
+        if (filter == "RotateCW")
+            angle = 90.0f;
+        else if (filter == "RotateCCW")
+            angle = -90.0f;
+
+        angle *= 3.14159265358979323846 / 180.0f;
+        rotate_shader.setUniform("angle", angle);
+
+        target.clear(sf::Color::Transparent);
+        target.draw(raster->sprite, &rotate_shader);
+        target.display();
+
+        Edit::Type edit_type = Edit::Type::NONE;
+        if (filter == "Rotate")
+            edit_type = Edit::Type::ROTATE;
+        else if (filter == "RotateCW")
+            edit_type = Edit::Type::ROTATECW;
+        else if (filter == "RotateCCW")
+            edit_type = Edit::Type::ROTATECCW;
+        undo_redo.undostack.push_back({ edit_type, canv->current_layer_index, new int(rotate_angle) });
+        undo_redo.redostack.clear();
+        raster->texture = target.getTexture();
+        raster->sprite.setTexture(raster->texture);
         return;
     }
 
     filter_shader.setUniform("texture", raster->texture);
-    vec2 pos = layer->pos - canv->start_pos;
-    filter_shader.setUniform("layer_pos", sf::Glsl::Vec2(pos.x, pos.y));
-    filter_shader.setUniform("canvas_size", sf::Glsl::Vec2(canv->size.x, canv->size.y));
 
+    target.clear(sf::Color::Transparent);
     target.draw(raster->sprite, &filter_shader);
     target.display();
+    Edit::Type edit_type = Edit::Type::NONE;
+    if (filter == "Brightness")
+        edit_type = Edit::Type::BRIGHTNESS;
+    else if (filter == "Contrast")
+        edit_type = Edit::Type::CONTRAST;
+    else if (filter == "Grayscale")
+        edit_type = Edit::Type::GRAYSCALE;
+    else if (filter == "Invert")
+        edit_type = Edit::Type::INVERT;
+    else if (filter == "Sepia")
+        edit_type = Edit::Type::SEPIA;
+    undo_redo.undostack.push_back({ edit_type, canv->current_layer_index, new sf::Texture(raster->texture) });
+    undo_redo.redostack.clear();
     raster->texture = target.getTexture();
     raster->sprite.setTexture(raster->texture);
-    raster->data = raster->texture.copyToImage();
-}
-
-// ..................................................................................................
-void cpu_filters::gray_scale(Raster &img)
-{
-    sf::Image& data = img.data;
-    for (int y = 0; y < data.getSize().y; y++)
-    {
-        for (int x = 0; x < data.getSize().x; x++)
-        {
-            sf::Color pix = data.getPixel(x, y);
-            i32 gray_scale_value = 0.299 * pix.r + 0.587 * pix.g + 0.144 * pix.b;
-            util::clamp(gray_scale_value, 0, 255);
-            data.setPixel(x, y, 
-                sf::Color((ui8)gray_scale_value, (ui8)gray_scale_value, (ui8)gray_scale_value, pix.a));
-        }
-    }
-    img.update_texture();
-} 
-
-// ..................................................................................................
-void cpu_filters::color_mask(Raster& img, float r, float g, float b)
-{
-    sf::Image& data = img.data;
-    for (int y = 0; y < data.getSize().y; y++)
-    {
-        for (int x = 0; x < data.getSize().x; x++)
-        {
-            sf::Color pix = data.getPixel(x, y);
-            i32 new_r = r * pix.r;
-            i32 new_g = g * pix.g;
-            i32 new_b = b * pix.b;
-            util::clamp(new_r, 0, 255);
-            util::clamp(new_g, 0, 255);
-            util::clamp(new_b, 0, 255);
-            data.setPixel(x, y, sf::Color((ui8)new_r, (ui8)new_g, (ui8)new_b, pix.a));
-        }
-    }
-    img.update_texture();
-}
-
-// ..................................................................................................
-void cpu_filters::flip_horizontally(Raster& img)
-{
-    int width = img.data.getSize().x;
-    int height = img.data.getSize().y;
-
-    for (int y = 0; y < height; ++y)
-    {
-        for (int x = 0; x < width / 2; ++x)
-        {
-            sf::Color left_pixel = img.data.getPixel(x, y);
-            sf::Color right_pixel = img.data.getPixel(width - x - 1, y);
-
-            img.data.setPixel(x, y, right_pixel);
-            img.data.setPixel(width - x - 1, y, left_pixel);
-        }
-    }
-    img.update_texture();
-}
-
-// ..................................................................................................
-void cpu_filters::flip_vertically(Raster& img)
-{
-    int width = img.data.getSize().x;
-    int height = img.data.getSize().y;
-
-    for (int y = 0; y < height / 2; ++y)
-    {
-        for (int x = 0; x < width; ++x)
-        {
-            sf::Color top_pixel = img.data.getPixel(x, y);
-            sf::Color bottom_pixel = img.data.getPixel(x, height - y - 1);
-
-            img.data.setPixel(x, y, bottom_pixel);
-            img.data.setPixel(x, height - y - 1, top_pixel);
-        }
-    }
-    img.update_texture();
 }

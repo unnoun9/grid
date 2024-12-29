@@ -14,10 +14,24 @@ Canvas::Canvas(vec2 window_size)
 //..................................................................................................
 const char* Canvas::default_layer_name()
 {
-    char* name = (char*)alloca(LAYER_NAME_MAX_LENGTH * sizeof(char));
-    sprintf(name, "layer %d", layers.size() + 1);
+    static char name[LAYER_NAME_MAX_LENGTH];
+    snprintf(name, LAYER_NAME_MAX_LENGTH, "layer %d", layers.size() + 1);
     name[LAYER_NAME_MAX_LENGTH - 1] = '\0';
     return name;
+}
+
+//..................................................................................................
+void Canvas::remove_deleted_layers()
+{
+    for (i32 i = layers.size() - 1; i >= 0; i--)
+    {
+        if (layers[i].is_deleted)
+        {
+            if (i == current_layer_index)
+                current_layer_index = -1;
+            layers.erase(layers.begin() + i);
+        }
+    }
 }
 
 //..................................................................................................
@@ -42,14 +56,14 @@ void Canvas::draw()
                 layer.pos += delta;
                 break;
             }
-            else; // other layer types..
+            else;
         }
         view_center = window_size / 2; // maybe make it only reset the center when resize is drastically bigger?
         navigate();
     }
 
+    static sf::RenderTexture texa, texb; // textures for blending layers
     // intermediate texture for drawing within canvas bounds
-    static sf::RenderTexture texa, texb;
     if (size != (vec2)texture.getSize())
     {
         texture.create(size.x, size.y);
@@ -100,11 +114,6 @@ void Canvas::draw()
     }
 
     // draw layers with their blend modes
-    auto is_visible_in_view = [](const sf::FloatRect& bounds, const sf::View& view) -> bool
-    {
-        sf::FloatRect viewport = view.getViewport();
-        return bounds.intersects(viewport);
-    };
     auto has_visible_layers_beneath = [](i32 index, const std::vector<Layer>& layers) -> bool // returns true if there is a layer beneath the given layer that is visible
     {
         for (i32 i = index - 1; i >= 0; i--)
@@ -156,7 +165,7 @@ void Canvas::draw()
                         texa.draw(img->sprite);
                         break;
                     }
-                    else; // other layer types..
+                    else;
                 }
                 texa.display();
                 blend_shader.setUniform("texture1", texa.getTexture());
@@ -178,7 +187,7 @@ void Canvas::draw()
                 texture.draw(sf::Sprite(texb.getTexture()), &blend_shader);
             }
         }
-        else; // other layer types..
+        else;
     }
 
     texture.display();
