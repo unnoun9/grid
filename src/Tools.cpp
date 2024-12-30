@@ -8,8 +8,8 @@ extern Variables vars;
 
 //..................................................................................................
 //..................................................................................................
-Tools::Tools(Canvas* canvas)
-    : canvas(canvas)
+Tools::Tools(Canvas* canvas, Undo_redo* ur)
+    : canvas(canvas), ur(ur)
 {
     use_current_tool[NO] = &no;
     use_current_tool[MOVE] = &move;
@@ -31,27 +31,37 @@ void move(Tools& t)
         layer_size = ((Raster*)current_layer->graphic)->texture.getSize();
     else;
 
-    // static vec2* prev_pos = nullptr;
+    static bool is_dragging = false;
+    static bool drag_started = false;
 
-    // when drag starts, store the previous position
-    // if (t.is_dragging && !prev_pos)
-    // {
-    //     prev_pos = new vec2(current_layer->pos);
-    // }
-    
+
     if (t.is_dragging)
     {
+        if (!is_dragging)
+        {
+            // drag has just started
+            is_dragging = true;
+            drag_started = true;
+            Edit e(Edit::MOVE, t.canvas->current_layer_index);
+            e.move_prev_pos = current_layer->pos;
+            t.ur->undostack.push_back(e);
+            t.ur->redostack.clear();
+        }
+        else
+        {
+            drag_started = false;
+        }
         current_layer->pos = t.canvas->mouse_p - t.layer_offset;
     }
-    // else if (prev_pos)
-    // {
-    //     // if drag ends, add the move action to the undo stack
-    //     undo_redo.undostack.push_back(Edit(Edit::MOVE, t.canvas->current_layer_index, (vec2*)new vec2(*prev_pos)));
-    //     undo_redo.redostack.clear();
-
-    //     delete prev_pos;
-    //     prev_pos = nullptr;
-    // }
+    else
+    {
+        if (is_dragging)
+        {
+            // drag has just ended
+            is_dragging = false;
+        }
+        drag_started = false;
+    }
 
     sf::FloatRect bounds(current_layer->pos, layer_size);
     if (bounds.contains(t.canvas->mouse_p))
@@ -101,11 +111,37 @@ void brush(Tools& t)
         target.create(layer_size.x, layer_size.y);
     }
 
+    static bool is_dragging = false;
+    static bool drag_started = false;
+
     if (!vars.mouse_l_held || !bounds.contains(t.canvas->mouse_p))
     {
         was_drawing = false;
         prev_mouse_p = t.canvas->mouse_p;
+
+        if (is_dragging)
+        {
+            // drag has just ended
+            is_dragging = false;
+        }
+        drag_started = false;
         return;
+    }
+
+    if (!is_dragging)
+    {
+        // drag has just started
+        drag_started = true;
+        is_dragging = true;
+
+        Edit e(Edit::BRUSH, t.canvas->current_layer_index);
+        e.tex = std::make_shared<sf::Texture>(raster->texture);
+        t.ur->undostack.push_back(e);
+        t.ur->redostack.clear();
+    }
+    else
+    {
+        drag_started = false;
     }
 
     sf::Color brush_color = t.canvas->current_color == 0 
@@ -179,11 +215,37 @@ void eraser(Tools& t)
     if (target.getSize().x != layer_size.x || target.getSize().y != layer_size.y)
         target.create(layer_size.x, layer_size.y);
 
+    static bool is_dragging = false;
+    static bool drag_started = false;
+
     if (!vars.mouse_l_held || !bounds.contains(t.canvas->mouse_p))
     {
         was_erasing = false;
         prev_mouse_p = t.canvas->mouse_p;
+
+        if (is_dragging)
+        {
+            // drag has just ended
+            is_dragging = false;
+        }
+        drag_started = false;
         return;
+    }
+
+    if (!is_dragging)
+    {
+        // drag has just started
+        drag_started = true;
+        is_dragging = true;
+
+        Edit e(Edit::ERASE, t.canvas->current_layer_index);
+        e.tex = std::make_shared<sf::Texture>(raster->texture);
+        t.ur->undostack.push_back(e);
+        t.ur->redostack.clear();
+    }
+    else
+    {
+        drag_started = false;
     }
 
     sf::Shader& shader = t.canvas->assets->get_shader("Eraser");  // Use Eraser shader instead
@@ -345,8 +407,10 @@ void fill(Tools& t)
             }
         }
 
-        // undo_redo.undostack.push_back({ Edit::FILL, t.canvas->current_layer_index, new sf::Texture(raster->texture) });
-        // undo_redo.redostack.clear();
+        Edit e(Edit::FILL, t.canvas->current_layer_index);
+        e.tex = std::make_shared<sf::Texture>(raster->texture);
+        t.ur->undostack.push_back(e);
+        t.ur->redostack.clear();
         raster->texture.update(raster_img);
     }
 }

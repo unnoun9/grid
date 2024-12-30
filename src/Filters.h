@@ -2,10 +2,12 @@
 #include "Canvas.h"
 
 struct Canvas;
+struct Undo_redo;
 
 struct Filters
 {
     Canvas* canv = nullptr;
+    Undo_redo* ur = nullptr;
     sf::RenderTexture target;
     i32 rotate_angle = 0;                               // [-360,360] range; the angle to rotate the image
     i32 brightness_strength = 0;                        // [-150,150] range; is added to normalized colors
@@ -15,7 +17,6 @@ struct Filters
     i32 pixelate_size = 1;                              // [1,100] range; the size of the pixelate
     
 
-    Filters(Canvas* canv);
+    Filters(Canvas* canv, Undo_redo* ur);
     void apply_filter(const std::string& filter);
-    void apply_shader(const std::string& filter);
 };

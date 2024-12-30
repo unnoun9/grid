@@ -4,8 +4,8 @@
 #include "Undo_Redo.h"
 
 // ..................................................................................................
-Filters::Filters(Canvas *canv)
-    : canv(canv)
+Filters::Filters(Canvas *canv, Undo_redo *ur)
+    : canv(canv), ur(ur)
 {
 }
 
@@ -18,6 +18,23 @@ void Filters::apply_filter(const std::string& filter)
 
     Raster* raster = (Raster*)layer->graphic;
     vec2 layer_size = raster->texture.getSize();
+
+    // undo-redo-related
+    ur->redostack.clear();
+    Edit::Type edit_type = Edit::NONE;
+    if (filter == "FlipX") edit_type = Edit::FLIPX;
+    else if (filter == "FlipY") edit_type = Edit::FLIPY;
+    else if (filter == "Rotate" || filter == "RotateCW" || filter == "RotateCCW") edit_type = Edit::ROTATE;
+    else if (filter == "Brightness") edit_type = Edit::BRIGHTNESS;
+    else if (filter == "Contrast") edit_type = Edit::CONTRAST;
+    else if (filter == "GrayScale") edit_type = Edit::GRAYSCALE;
+    else if (filter == "Invert") edit_type = Edit::INVERT;
+    else if (filter == "Sepia") edit_type = Edit::SEPIA;
+    else if (filter == "Pixelate") edit_type = Edit::PIXELATE;
+    else if (filter == "BoxBlur") edit_type = Edit::BOX_BLUR;
+    else if (filter == "GaussianBlur") edit_type = Edit::GAUSSIAN_BLUR;
+    else if (filter == "EdgeDetection") edit_type = Edit::EDGE_DETECT;
+    Edit e(edit_type, canv->current_layer_index);
 
     sf::Shader* shader = nullptr;
     if (filter != "BoxBlur" && filter != "GaussianBlur" && filter != "EdgeDetection" && filter != "FlipX" && filter != "FlipY" && filter != "Rotate" && filter != "RotateCW" && filter != "RotateCCW")
@@ -59,6 +76,8 @@ void Filters::apply_filter(const std::string& filter)
         target.draw(intermediate_sprite, &vertical_shader);
         target.display();
 
+        e.tex = std::make_shared<sf::Texture>(raster->texture);
+        ur->undostack.push_back(e);
         raster->texture = target.getTexture();
         raster->sprite.setTexture(raster->texture);
         return;
@@ -90,6 +109,8 @@ void Filters::apply_filter(const std::string& filter)
         target.draw(intermediate_sprite, &vertical_shader);
         target.display();
 
+        e.tex = std::make_shared<sf::Texture>(raster->texture);
+        ur->undostack.push_back(e);
         raster->texture = target.getTexture();
         raster->sprite.setTexture(raster->texture);
         return;
@@ -103,6 +124,8 @@ void Filters::apply_filter(const std::string& filter)
         target.draw(raster->sprite, &edge_shader);
         target.display();
 
+        e.tex = std::make_shared<sf::Texture>(raster->texture);
+        ur->undostack.push_back(e);
         raster->texture = target.getTexture();
         raster->sprite.setTexture(raster->texture);
         return;
@@ -116,6 +139,7 @@ void Filters::apply_filter(const std::string& filter)
         target.draw(raster->sprite, &flipx_shader);
         target.display();
 
+        ur->undostack.push_back(e);
         raster->texture = target.getTexture();
         raster->sprite.setTexture(raster->texture);
         return;
@@ -129,6 +153,7 @@ void Filters::apply_filter(const std::string& filter)
         target.draw(raster->sprite, &flipy_shader);
         target.display();
 
+        ur->undostack.push_back(e);
         raster->texture = target.getTexture();
         raster->sprite.setTexture(raster->texture);
         return;
@@ -151,6 +176,8 @@ void Filters::apply_filter(const std::string& filter)
         target.draw(raster->sprite, &rotate_shader);
         target.display();
 
+        e.tex = std::make_shared<sf::Texture>(raster->texture);   
+        ur->undostack.push_back(e);
         raster->texture = target.getTexture();
         raster->sprite.setTexture(raster->texture);
         return;
@@ -161,6 +188,10 @@ void Filters::apply_filter(const std::string& filter)
     target.clear(sf::Color::Transparent);
     target.draw(raster->sprite, &filter_shader);
     target.display();
+
+    if (e.type != Edit::INVERT)
+        e.tex = std::make_shared<sf::Texture>(raster->texture);   
+    ur->undostack.push_back(e);
     raster->texture = target.getTexture();
     raster->sprite.setTexture(raster->texture);
 }

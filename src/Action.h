@@ -4,6 +4,7 @@
 #include "vec2t.h"
 
 struct Tools;
+struct Undo_redo;
 
 // holds data related to user inputs
 struct Action
@@ -18,7 +19,8 @@ struct Action
     vec2 prev_pos = vec2(0, 0); // the mouse position in the previous frame
     vec2 pos = vec2(0, 0);      // the mouse position of the event was a mouse event
     float ticks = 0;            // the number of ticks scrolled by the mouse scroll 
-    Tools* tools = nullptr;      // any other data that needs to be passed
+    Tools* tools = nullptr;     // to access variables
+    Undo_redo* ur = nullptr;    // to access variables
 
     Action();
     Action(const std::string& name, Action_type type);

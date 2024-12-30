@@ -1,6 +1,7 @@
 #include <imgui.h>
 #include <ImGuiFileDialog.h>
 #include "gui.h"
+#include "Undo_redo.h"
 
 void show_filter_popup(const char* popup_name, const char* slider_label, int& filter_strength, int min_value, int max_value, Filters& filters, const std::string& filter_name, bool& show_popup)
 {
@@ -56,7 +57,7 @@ void show_angle_popup(const char* popup_name, const char* slider_label, int& ang
 }
 
 //..................................................................................................
-void gui::menu_bar(Variables& vars, Filters& filters)
+void gui::menu_bar(Variables& vars, Filters& filters, Undo_redo& ur)
 {
     static bool show_rotate_popup = false;
     static bool show_brightness_popup = false;
@@ -92,8 +93,10 @@ void gui::menu_bar(Variables& vars, Filters& filters)
         }
         if (ImGui::BeginMenu("Edit"))
         {
-            if (ImGui::MenuItem("Undo", "CTRL+Z"));
-            if (ImGui::MenuItem("Redo", "CTRL+Y"));
+            if (ImGui::MenuItem("Undo", "CTRL+Z"))
+                ur.undo();
+            if (ImGui::MenuItem("Redo", "CTRL+Y"))
+                ur.redo();
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("View"))

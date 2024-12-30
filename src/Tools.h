@@ -2,6 +2,7 @@
 #include "Canvas.h"
 
 struct Canvas;
+struct Undo_redo;
 
 // contains all data and functionality for every tool in the tools panel
 struct Tools
@@ -25,6 +26,7 @@ struct Tools
     };
 
     Canvas* canvas;                                 // to access canvas variables
+    Undo_redo* ur;                                  // to access undo_redo variables
     i32 current_tool = NO;                          // just the index of the current tool; used to index into other variables here; only data and functionality related to this tool will be used
     void (*use_current_tool[NUM_TOOLS])(Tools&);    // pointers to functions that do each tool's job
 
@@ -47,7 +49,7 @@ struct Tools
     bool fill_contiguous = true;
     bool fill_anti_aliasing = true;     // not implemented yet
 
-    Tools(Canvas*);
+    Tools(Canvas*, Undo_redo*);
 };
 
 inline void no(Tools&) {} // literally do nothing lol

@@ -131,11 +131,17 @@ void do_action(const Action& action)
         }
         else if (action.name == "undo")
         {
-            // undo_redo.undo();
+            if (action.ur)
+                action.ur->undo();
+            else
+                std::cerr << "Undo/Redo pointer is null in do_action\n";
         }
         else if (action.name == "redo")
         {
-            // undo_redo.redo();
+            if (action.ur)
+                action.ur->redo();
+            else
+                std::cerr << "Undo/Redo pointer is null in do_action\n";
         }
         else if (action.name == "reset_canvas_navigation")
         {

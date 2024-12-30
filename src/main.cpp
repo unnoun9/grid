@@ -24,7 +24,6 @@ std::list<i32> currently_pressed_keys;              // to track the current shor
 Variables vars;                                     // variables that imgui and actions use and change
 bool shaders_available = true;                      // tracks whether shaders are available in the machine
 extern const char* layer_types_str[];               // see Layer.h
-// Undo_Redo undo_redo;                                // the undo redo system
 
 //................................................. SOME USEFUL FUNCS .................................................
 // draws a line from point p1 to point p2 of the specified color in the window
@@ -89,10 +88,11 @@ i32 main()
 
     // the one and the only, canvas!
     Canvas canvas(vec2(window.getSize().x * 0.7, window.getSize().y * 0.85));
-    // undo_redo.canv = &canvas;
+    Undo_redo ur;
+    ur.canv = &canvas;
 
     // da tools
-    Tools tools(&canvas);
+    Tools tools(&canvas, &ur);
     const char* tools_tooltips[Tools::NUM_TOOLS] = {    // used by imgui tooltips
         "No tool. Literally no tool is selected at all.. (N)",
         "Move tool. Moves layers using the mouse input. (V)",
@@ -104,7 +104,8 @@ i32 main()
     canvas.tools = &tools;
 
     // da filters
-    Filters filters(&canvas);
+    Filters filters(&canvas, &ur);
+    ur.filters = &filters;
 
     // cursor
     sf::CircleShape circ(5 * canvas.zoom_factor, 128);
@@ -162,6 +163,7 @@ i32 main()
                 // call do_action with the correct action data
                 Action a = Action(action_map.at(currently_pressed_keys), Action::START);
                 a.tools = &tools;
+                a.ur = &ur;
                 do_action(a);
             }
             else if (event.type == sf::Event::KeyReleased)
@@ -322,16 +324,19 @@ i32 main()
                 strncpy(duplicate.name, canvas.default_layer_name(), LAYER_NAME_MAX_LENGTH - 1);
                 canvas.layers.insert(canvas.layers.begin() + n + 1, duplicate);
 
-                // undo_redo.undostack.push_back(Edit(Edit::LAYER_ADD, n + 1, nullptr));
-                // undo_redo.redostack.clear();
+                Edit e(Edit::LAYER_ADD, n + 1);
+                ur.undostack.push_back(e);
+                ur.redostack.clear();
             }
             ImGui::SameLine();
 
             // "deletes" the layer
             if (ImGui::Button("X"))
             {
-                // undo_redo.undostack.push_back(Edit(Edit::LAYER_REMOVE, n, new Layer(layer)));
-                // undo_redo.redostack.clear();
+                Edit e(Edit::LAYER_REMOVE, n);
+                e.removed_layer = std::make_shared<Layer>(layer);
+                ur.undostack.push_back(e);
+                ur.redostack.clear();
 
                 if (canvas.current_layer_index == n)
                     canvas.current_layer_index = -1;
@@ -401,8 +406,9 @@ i32 main()
                     raster, Layer::RASTER, Layer::NORMAL
                 );
 
-                // undo_redo.undostack.push_back({ Edit::LAYER_ADD, (i32)canvas.layers.size() - 1, nullptr });
-                // undo_redo.redostack.clear();
+                Edit e(Edit::LAYER_ADD, canvas.layers.size() - 1);
+                ur.undostack.push_back(e);
+                ur.redostack.clear();
             }
         }
         ImGui::End();
@@ -491,7 +497,7 @@ i32 main()
         if (canvas.initialized && vars.canvas_focused) tools.use_current_tool[tools.current_tool](tools);
 
         //................................................. OTHER GUI STUFF LIKE MENU BAR AND DIALOGS .................................................
-        if (vars.show_menu_bar) gui::menu_bar(vars, filters);
+        if (vars.show_menu_bar) gui::menu_bar(vars, filters, ur);
         if (vars.show_open_img_dialog) gui::open_dialog(vars);
         if (vars.show_saveas_img_dialog) gui::saveas_dialog(vars);
 
