@@ -47,7 +47,7 @@ void quit(bool& running, sf::RenderWindow& window)
 i32 main()
 {
     //................................................. INITIALIZATION .................................................
-    sf::RenderWindow window(sf::VideoMode(1500, 900), "Grid", sf::Style::Default);
+    sf::RenderWindow window(sf::VideoMode(1280, 720), "Grid", sf::Style::Default);
     window.setKeyRepeatEnabled(false);
     window.setFramerateLimit(60);
     sf::Clock delta_clock;
@@ -245,7 +245,9 @@ i32 main()
         //................................................. UPDATE THE STATE OF THE PROGRAM, DRAW / RENDER GUI, CANVAS, AND EVERYTHING ELSE BELOW! .................................................
         ImGui::SFML::Update(window, delta_clock.restart());
         ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
+#if 0
         ImGui::ShowDemoWindow();
+#endif
 
         //................................................. CANVAS DRAWING & WINDOW .................................................
         // draw canvas' stuff to the RenderTexture
